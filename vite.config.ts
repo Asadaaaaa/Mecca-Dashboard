@@ -8,7 +8,16 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(import.meta.dirname, "./src"),
+    },
+  },
+  server: {
+    port: 5173,
+    proxy: {
+      "/primary": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+      },
     },
   },
 })
