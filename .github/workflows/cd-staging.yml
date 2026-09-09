@@ -1,0 +1,28 @@
+name: Mecca Dashboard | CD | Staging
+
+on:
+  push:
+    branches: [ "staging" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: executing remote ssh commands using key
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          port: ${{ secrets.PORT }}
+          script: |
+            export NVM_DIR=~/.nvm
+            source ~/.nvm/nvm.sh
+            cd /root/app/mecca/Mecca-Dashboard
+            git reset --hard HEAD
+            git pull
+            git switch staging
+            git pull origin staging
+            npm i
+            npm run build
+            pm2 restart mecca-dashboard-stg || pm2 start npm --name mecca-dashboard-stg -- run preview -- --host 0.0.0.0 --port 5174

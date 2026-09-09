@@ -8,8 +8,10 @@ export const LAST_REFRESH_TIME_KEY = "mecca_last_refresh_time"
 // 90 minutes in milliseconds (1.5 hours activity refresh trigger)
 const REFRESH_INTERVAL_MS = 90 * 60 * 1000
 
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/primary/v1"
+
 export const apiClient = axios.create({
-  baseURL: "/primary/v1",
+  baseURL: BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -57,7 +59,7 @@ apiClient.interceptors.request.use(
           isRefreshing = true
           try {
             const res = await axios.post(
-              "/primary/v1/auth/refresh-token",
+              `${BASE_URL}/auth/refresh-token`,
               { refreshToken },
               {
                 headers: {
