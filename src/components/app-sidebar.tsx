@@ -120,6 +120,10 @@ const sidebarData = {
           url: "/settings/users",
         },
         {
+          title: "Role & Hak Akses",
+          url: "/settings/roles",
+        },
+        {
           title: "Daftar Warehouse",
           url: "/settings/warehouses",
         },
