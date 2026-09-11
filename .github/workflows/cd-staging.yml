@@ -26,3 +26,4 @@ jobs:
             npm i
             npm run build
             pm2 restart mecca-dashboard-stg || pm2 start npm --name mecca-dashboard-stg -- run preview -- --host 0.0.0.0 --port 5174
+
