@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -11,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { roleService } from "@/services/role.service"
 import type { Role, Permission, RoleFormData } from "@/types/settings.types"
-import { Loader2Icon, ShieldIcon, CheckSquareIcon, SquareIcon } from "lucide-react"
+import { Loader2Icon, ShieldIcon, CheckIcon, AlertCircleIcon, LayersIcon } from "lucide-react"
 
 interface RoleDialogProps {
   open: boolean
@@ -26,6 +27,7 @@ export function RoleDialog({
   role,
   onSave,
 }: RoleDialogProps) {
+  const isEdit = Boolean(role)
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<number[]>([])
@@ -125,54 +127,75 @@ export function RoleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[650px] max-h-[85vh] flex flex-col">
+      <DialogContent className="sm:max-w-[620px] max-h-[88vh] flex flex-col">
         <DialogHeader>
-          <div className="flex items-center gap-2">
-            <ShieldIcon className="size-5 text-primary" />
-            <DialogTitle>{role ? `Edit Role: ${role.name}` : "Tambah Role Baru"}</DialogTitle>
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+              <ShieldIcon className="size-5" />
+            </div>
+            <div>
+              <DialogTitle>{isEdit ? `Edit Role: ${role?.name}` : "Tambah Role Baru"}</DialogTitle>
+              <DialogDescription>
+                {isEdit
+                  ? `Perbarui wewenang dan daftar modul izin fitur untuk role ${role?.name}.`
+                  : "Buat tingkat wewenang baru dan tentukan daftar fitur yang dapat diakses."}
+              </DialogDescription>
+            </div>
           </div>
         </DialogHeader>
 
+        {error && (
+          <div className="flex items-start gap-2.5 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive font-medium my-2">
+            <AlertCircleIcon className="size-4 shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           <div className="space-y-4 py-2 overflow-y-auto pr-1">
-            {error && (
-              <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive font-medium">
-                {error}
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="role-name" className="text-xs font-semibold">
+                  Nama Role <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="role-name"
+                  placeholder="Contoh: sales_manager, warehouse_staff"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={isSuperadmin}
+                  className="h-9 text-sm font-mono"
+                  required
+                />
+                {isSuperadmin && (
+                  <p className="text-[11px] text-muted-foreground">Nama role superadmin sistem bersifat permanen.</p>
+                )}
               </div>
-            )}
 
-            <div className="space-y-2">
-              <Label htmlFor="role-name">Nama Role <span className="text-destructive">*</span></Label>
-              <Input
-                id="role-name"
-                placeholder="Contoh: sales_manager, warehouse_staff"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={isSuperadmin}
-                required
-              />
-              {isSuperadmin && (
-                <p className="text-[11px] text-muted-foreground">Nama role superadmin sistem tidak dapat diubah.</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="role-desc">Deskripsi Role</Label>
-              <Input
-                id="role-desc"
-                placeholder="Contoh: Mengelola pesanan penjualan dan penawaran"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
+              <div className="space-y-1.5">
+                <Label htmlFor="role-desc" className="text-xs font-semibold">
+                  Deskripsi / Keterangan Wewenang
+                </Label>
+                <Input
+                  id="role-desc"
+                  placeholder="Contoh: Mengelola pesanan penjualan, penawaran, dan customer"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="h-9 text-sm"
+                />
+              </div>
             </div>
 
             {/* Permissions Matrix */}
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between border-b pb-2">
+            <div className="space-y-3 pt-3 border-t border-border/50">
+              <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-sm font-semibold">Daftar Hak Akses Fitur (Permissions)</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Pilih fitur dan modul yang diizinkan untuk diakses oleh role ini ({selectedPermissionIds.length} dari {allPermissions.length} terpilih).
+                  <div className="flex items-center gap-1.5">
+                    <LayersIcon className="size-4 text-primary" />
+                    <Label className="text-xs font-semibold">Daftar Hak Akses Fitur</Label>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    {selectedPermissionIds.length} dari {allPermissions.length} fitur aktif untuk role ini.
                   </p>
                 </div>
                 <Button
@@ -180,7 +203,7 @@ export function RoleDialog({
                   variant="outline"
                   size="sm"
                   onClick={handleSelectAll}
-                  className="text-xs h-7"
+                  className="text-xs h-7.5 font-medium px-2.5"
                 >
                   {selectedPermissionIds.length === allPermissions.length ? "Batal Semua" : "Pilih Semua"}
                 </Button>
@@ -192,46 +215,55 @@ export function RoleDialog({
                   Memuat daftar permission...
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {Object.entries(groupedPermissions).map(([mod, perms]) => {
                     const isAllModSelected = perms.every((p) => selectedPermissionIds.includes(p.id))
+                    const selectedCount = perms.filter((p) => selectedPermissionIds.includes(p.id)).length
+
                     return (
-                      <div key={mod} className="rounded-lg border bg-card p-3 space-y-2.5">
-                        <div className="flex items-center justify-between border-b pb-1.5">
-                          <span className="text-xs font-bold uppercase tracking-wider text-foreground">
-                            Modul {mod}
-                          </span>
+                      <div key={mod} className="rounded-xl border border-border/70 bg-card p-3 space-y-2">
+                        <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold uppercase tracking-wider text-foreground">
+                              {mod}
+                            </span>
+                            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              {selectedCount}/{perms.length}
+                            </span>
+                          </div>
                           <button
                             type="button"
                             onClick={() => toggleModuleAll(perms)}
-                            className="text-[11px] font-medium text-primary hover:underline"
+                            className="text-[11px] font-medium text-primary hover:underline cursor-pointer"
                           >
                             {isAllModSelected ? "Lepas Semua" : "Pilih Semua"}
                           </button>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
                           {perms.map((perm) => {
                             const isChecked = selectedPermissionIds.includes(perm.id)
                             return (
                               <div
                                 key={perm.id}
                                 onClick={() => togglePermission(perm.id)}
-                                className={`flex items-start gap-2.5 p-2 rounded-md border text-xs cursor-pointer transition-colors ${
+                                className={`flex items-start gap-2.5 p-2 rounded-lg border text-xs cursor-pointer transition-all ${
                                   isChecked
-                                    ? "bg-primary/10 border-primary/40 text-foreground"
-                                    : "bg-muted/20 border-border/60 hover:bg-muted/40 text-muted-foreground"
+                                    ? "bg-primary/10 border-primary/40 text-foreground ring-1 ring-primary/20"
+                                    : "bg-muted/20 border-border/50 hover:bg-muted/40 text-muted-foreground"
                                 }`}
                               >
-                                <div className="mt-0.5 text-primary">
-                                  {isChecked ? (
-                                    <CheckSquareIcon className="size-4 text-primary" />
-                                  ) : (
-                                    <SquareIcon className="size-4 text-muted-foreground/60" />
-                                  )}
+                                <div
+                                  className={`mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-md border transition-colors ${
+                                    isChecked
+                                      ? "border-primary bg-primary text-primary-foreground"
+                                      : "border-muted-foreground/40 bg-transparent"
+                                  }`}
+                                >
+                                  {isChecked && <CheckIcon className="size-3" />}
                                 </div>
-                                <div className="space-y-0.5 flex-1">
-                                  <div className="font-semibold text-foreground font-mono text-[11px]">
+                                <div className="space-y-0.5 flex-1 min-w-0">
+                                  <div className="font-semibold text-foreground font-mono text-[11px] truncate">
                                     {perm.name}
                                   </div>
                                   <div className="text-[10px] text-muted-foreground line-clamp-2">
@@ -250,18 +282,23 @@ export function RoleDialog({
             </div>
           </div>
 
-          <DialogFooter className="pt-4 border-t mt-2">
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
+              className="text-xs font-medium"
             >
               Batal
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading && <Loader2Icon className="mr-2 size-4 animate-spin" />}
-              {role ? "Simpan Perubahan" : "Buat Role"}
+            <Button
+              type="submit"
+              disabled={loading}
+              className="text-xs font-medium bg-primary text-primary-foreground"
+            >
+              {loading && <Loader2Icon className="mr-1.5 size-4 animate-spin" />}
+              {isEdit ? "Simpan Perubahan" : "Buat Role"}
             </Button>
           </DialogFooter>
         </form>

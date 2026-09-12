@@ -10,61 +10,55 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { Warehouse, WarehouseFormData } from "@/types/settings.types"
-import { Loader2Icon, Building2Icon, AlertCircleIcon } from "lucide-react"
+import type { ProductCategory, ProductCategoryFormData } from "@/types/product.types"
+import { Loader2Icon, LayersIcon, AlertCircleIcon } from "lucide-react"
 
-interface WarehouseDialogProps {
+interface CategoryDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  warehouse?: Warehouse | null
-  onSave: (data: WarehouseFormData) => Promise<void>
+  category?: ProductCategory | null
+  onSave: (data: ProductCategoryFormData) => Promise<void>
 }
 
-export function WarehouseDialog({
+export function CategoryDialog({
   open,
   onOpenChange,
-  warehouse,
+  category,
   onSave,
-}: WarehouseDialogProps) {
-  const isEdit = Boolean(warehouse)
-  const [formData, setFormData] = useState<WarehouseFormData>({
+}: CategoryDialogProps) {
+  const isEdit = Boolean(category)
+  const [formData, setFormData] = useState<ProductCategoryFormData>({
     code: "",
     name: "",
-    pic_name: "",
-    phone: "",
-    address: "",
+    description: "",
     status: "active",
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (warehouse) {
+    if (category) {
       setFormData({
-        code: warehouse.code || "",
-        name: warehouse.name || "",
-        pic_name: warehouse.pic_name || "",
-        phone: warehouse.phone || "",
-        address: warehouse.address || "",
-        status: warehouse.status || "active",
+        code: category.code || "",
+        name: category.name || "",
+        description: category.description || "",
+        status: category.status || "active",
       })
     } else {
       setFormData({
         code: "",
         name: "",
-        pic_name: "",
-        phone: "",
-        address: "",
+        description: "",
         status: "active",
       })
     }
     setError(null)
-  }, [warehouse, open])
+  }, [category, open])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.name.trim()) {
-      setError("Nama gudang wajib diisi")
+      setError("Nama kategori wajib diisi")
       return
     }
 
@@ -75,7 +69,7 @@ export function WarehouseDialog({
       onOpenChange(false)
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string }
-      setError(e.response?.data?.message || e.message || "Gagal menyimpan data gudang")
+      setError(e.response?.data?.message || e.message || "Gagal menyimpan data kategori")
     } finally {
       setLoading(false)
     }
@@ -83,18 +77,18 @@ export function WarehouseDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[520px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-              <Building2Icon className="size-5" />
+            <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+              <LayersIcon className="size-5" />
             </div>
             <div>
-              <DialogTitle>{isEdit ? "Edit Data Gudang" : "Tambah Gudang Baru"}</DialogTitle>
+              <DialogTitle>{isEdit ? "Edit Kategori Produk" : "Tambah Kategori Baru"}</DialogTitle>
               <DialogDescription>
                 {isEdit
-                  ? `Perbarui informasi fasilitas penyimpanan dan penanggung jawab fisik untuk ${warehouse?.name}.`
-                  : "Daftarkan fasilitas gudang fisik atau hub transit baru ke dalam sistem."}
+                  ? `Perbarui informasi kategori dan status klasifikasi untuk ${category?.name}.`
+                  : "Buat kategori baru untuk mengelompokkan produk dalam katalog."}
               </DialogDescription>
             </div>
           </div>
@@ -111,23 +105,23 @@ export function WarehouseDialog({
           <div className="space-y-3.5">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="code" className="text-xs font-semibold">
-                  Kode Gudang
+                <Label htmlFor="cat-code" className="text-xs font-semibold">
+                  Kode Kategori
                 </Label>
                 <Input
-                  id="code"
-                  placeholder="Otomatis (misal WH-001)"
+                  id="cat-code"
+                  placeholder="Otomatis (misal CAT-001)"
                   value={formData.code}
                   onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                   className="h-9 text-sm font-mono"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="status" className="text-xs font-semibold">
-                  Status Operasional
+                <Label htmlFor="cat-status" className="text-xs font-semibold">
+                  Status
                 </Label>
                 <select
-                  id="status"
+                  id="cat-status"
                   className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value as "active" | "inactive" })}
@@ -139,12 +133,12 @@ export function WarehouseDialog({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="name" className="text-xs font-semibold">
-                Nama Gudang / Fasilitas <span className="text-destructive">*</span>
+              <Label htmlFor="cat-name" className="text-xs font-semibold">
+                Nama Kategori <span className="text-destructive">*</span>
               </Label>
               <Input
-                id="name"
-                placeholder="Contoh: Gudang Utama Jakarta"
+                id="cat-name"
+                placeholder="Contoh: Electronics & Hardware"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="h-9 text-sm"
@@ -152,44 +146,17 @@ export function WarehouseDialog({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="pic_name" className="text-xs font-semibold">
-                  Penanggung Jawab (PIC)
-                </Label>
-                <Input
-                  id="pic_name"
-                  placeholder="Contoh: Budi Santoso"
-                  value={formData.pic_name || ""}
-                  onChange={(e) => setFormData({ ...formData, pic_name: e.target.value })}
-                  className="h-9 text-sm"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="phone" className="text-xs font-semibold">
-                  Nomor Telepon PIC
-                </Label>
-                <Input
-                  id="phone"
-                  placeholder="081234567890"
-                  value={formData.phone || ""}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="h-9 text-sm"
-                />
-              </div>
-            </div>
-
             <div className="space-y-1.5">
-              <Label htmlFor="address" className="text-xs font-semibold">
-                Alamat Lokasi Gudang
+              <Label htmlFor="cat-desc" className="text-xs font-semibold">
+                Deskripsi
               </Label>
               <textarea
-                id="address"
+                id="cat-desc"
                 rows={3}
                 className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder="Kawasan Industri Pulogadung Blok A-12, Jakarta Timur..."
-                value={formData.address || ""}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                placeholder="Deskripsi ringkas kelompok produk ini..."
+                value={formData.description || ""}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </div>
           </div>
@@ -210,7 +177,7 @@ export function WarehouseDialog({
               className="text-xs font-medium bg-primary text-primary-foreground"
             >
               {loading && <Loader2Icon className="mr-1.5 size-4 animate-spin" />}
-              {isEdit ? "Simpan Perubahan" : "Tambah Gudang"}
+              {isEdit ? "Simpan Perubahan" : "Tambah Kategori"}
             </Button>
           </DialogFooter>
         </form>

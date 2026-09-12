@@ -70,13 +70,13 @@ export function ConfirmModal({
   const getIconBg = () => {
     switch (variant) {
       case "destructive":
-        return "bg-rose-100 dark:bg-rose-950/50"
+        return "bg-rose-500/10 text-rose-600 dark:text-rose-400"
       case "warning":
-        return "bg-amber-100 dark:bg-amber-950/50"
+        return "bg-amber-500/10 text-amber-600 dark:text-amber-400"
       case "success":
-        return "bg-emerald-100 dark:bg-emerald-950/50"
+        return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
       default:
-        return "bg-blue-100 dark:bg-blue-950/50"
+        return "bg-blue-500/10 text-blue-600 dark:text-blue-400"
     }
   }
 
@@ -96,29 +96,29 @@ export function ConfirmModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[420px] p-6">
+      <DialogContent className="sm:max-w-[440px] p-6">
         <div className="flex items-start gap-4">
           <div
             className={cn(
-              "flex size-10 shrink-0 items-center justify-center rounded-full",
+              "flex size-11 shrink-0 items-center justify-center rounded-2xl",
               getIconBg()
             )}
           >
             {getIcon()}
           </div>
-          <div className="flex-1 text-left space-y-1">
-            <DialogTitle className="text-base font-semibold leading-6 text-foreground">
+          <div className="flex-1 text-left space-y-1 pt-0.5">
+            <DialogTitle className="text-base font-bold leading-snug text-foreground">
               {title}
             </DialogTitle>
             {description && (
-              <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
+              <DialogDescription className="text-xs text-muted-foreground leading-relaxed pt-0.5">
                 {description}
               </DialogDescription>
             )}
           </div>
         </div>
 
-        <DialogFooter className="mt-6 flex flex-row justify-end gap-2">
+        <DialogFooter className="mt-5">
           {!isAlert && (
             <Button
               type="button"
@@ -126,7 +126,7 @@ export function ConfirmModal({
               size="sm"
               onClick={handleCancel}
               disabled={loading}
-              className="cursor-pointer hover:bg-muted/80 active:scale-98 transition-all"
+              className="text-xs font-medium cursor-pointer"
             >
               {cancelText}
             </Button>
@@ -139,8 +139,8 @@ export function ConfirmModal({
             onClick={handleConfirm}
             disabled={loading}
             className={cn(
-              "cursor-pointer active:scale-98 transition-all",
-              variant === "destructive" && "bg-rose-600 hover:bg-rose-700 text-white shadow-xs"
+              "text-xs font-medium cursor-pointer shadow-xs",
+              variant === "destructive" && "bg-rose-600 hover:bg-rose-700 text-white"
             )}
           >
             {loading && <Loader2Icon className="mr-1.5 size-4 animate-spin" />}
