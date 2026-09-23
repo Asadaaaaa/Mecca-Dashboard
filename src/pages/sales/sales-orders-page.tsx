@@ -69,7 +69,7 @@ export default function SalesOrdersPage() {
   const [search, setSearch] = useState("")
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [statusFilter, setStatusFilter] = useState("Semua")
-  const [sortField, setSortField] = useState("date")
+  const [sortField, setSortField] = useState("order_date")
   const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("DESC")
   const [page, setPage] = useState(1)
   const [limit] = useState(10)
