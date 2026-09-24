@@ -150,7 +150,7 @@ export default function InventoryPage() {
           setFeedback(`Data stok "${name}" berhasil dihapus.`)
           setTimeout(() => setFeedback(null), 3000)
           loadData()
-        } catch (err: any) {
+        } catch {
           setFeedback("Gagal menghapus data stok.")
         }
       },
@@ -172,7 +172,7 @@ export default function InventoryPage() {
           setFeedback(`${count} item stok berhasil dihapus.`)
           setTimeout(() => setFeedback(null), 3000)
           loadData()
-        } catch (err: any) {
+        } catch {
           setFeedback("Gagal menghapus item stok terpilih.")
         }
       },

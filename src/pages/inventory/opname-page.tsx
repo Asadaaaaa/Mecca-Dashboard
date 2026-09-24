@@ -152,7 +152,7 @@ export default function StockOpnamePage() {
       setDetailModal({ open: true, opname: null })
       const data = await inventoryService.getOpnameById(id)
       setDetailModal({ open: true, opname: data })
-    } catch (err: any) {
+    } catch {
       setFeedback("Gagal mengambil detail sesi opname.")
     } finally {
       setDetailLoading(false)
