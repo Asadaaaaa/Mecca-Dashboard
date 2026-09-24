@@ -9,6 +9,7 @@ export interface DeliveryItemDetail {
     id: number
     code: string
     name: string
+    selling_price?: number | string
   }
   quantity: number
   so_quantity?: number

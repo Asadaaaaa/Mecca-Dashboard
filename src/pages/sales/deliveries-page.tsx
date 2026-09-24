@@ -19,6 +19,7 @@ import { useTheme } from "@/components/theme-provider"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
 import { deliveryService } from "@/services/delivery.service"
 import { DeliveryDialog } from "@/pages/sales/delivery-dialog"
+import { InvoiceDialog } from "@/pages/sales/invoice-dialog"
 import type { Delivery, DeliveryMetrics } from "@/types/delivery.types"
 import {
   SunIcon,
@@ -41,6 +42,7 @@ import {
   Loader2Icon,
   PackageOpenIcon,
   AlertTriangleIcon,
+  FileTextIcon,
 } from "lucide-react"
 import {
   Dialog,
@@ -74,6 +76,8 @@ export default function DeliveriesPage() {
 
   // Dialogs
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false)
+  const [selectedDeliveryForInvoice, setSelectedDeliveryForInvoice] = useState<number | null>(null)
   const [previewItem, setPreviewItem] = useState<Delivery | null>(null)
   const [printItem, setPrintItem] = useState<Delivery | null>(null)
 
@@ -531,6 +535,20 @@ export default function DeliveriesPage() {
                               </Button>
                             )}
 
+                            {/* Issue Invoice from Delivery */}
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => {
+                                setSelectedDeliveryForInvoice(item.id)
+                                setInvoiceDialogOpen(true)
+                              }}
+                              title="Terbitkan Faktur (Invoice)"
+                              className="cursor-pointer hover:bg-blue-500/10 text-blue-600 active:scale-95 transition-all"
+                            >
+                              <FileTextIcon className="size-3.5" />
+                            </Button>
+
                             {/* Delete */}
                             <Button
                               variant="ghost"
@@ -592,6 +610,17 @@ export default function DeliveriesPage() {
         onSuccess={() => {
           setFeedback("Surat jalan berhasil dibuat dan siap dimuat.")
           fetchData()
+        }}
+      />
+
+      {/* Issue Invoice Dialog */}
+      <InvoiceDialog
+        open={invoiceDialogOpen}
+        onOpenChange={setInvoiceDialogOpen}
+        preselectedDeliveryId={selectedDeliveryForInvoice}
+        onSuccess={() => {
+          setFeedback("Faktur komersial berhasil diterbitkan dari Surat Jalan!")
+          setTimeout(() => setFeedback(null), 3500)
         }}
       />
 
