@@ -19,6 +19,7 @@ import { useTheme } from "@/components/theme-provider"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
 import { invoiceService } from "@/services/invoice.service"
 import { InvoiceDialog } from "@/pages/sales/invoice-dialog"
+import { PaymentDialog } from "@/pages/sales/payment-dialog"
 import type { Invoice, InvoiceMetrics } from "@/types/invoice.types"
 import {
   SunIcon,
@@ -41,6 +42,7 @@ import {
   Loader2Icon,
   AlertTriangleIcon,
   Building2Icon,
+  CreditCardIcon,
 } from "lucide-react"
 import {
   Dialog,
@@ -81,6 +83,9 @@ export default function InvoicesPage() {
 
   // Dialogs
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
+  const [paymentPreselectedCust, setPaymentPreselectedCust] = useState<number | null>(null)
+  const [paymentPreselectedInv, setPaymentPreselectedInv] = useState<number | null>(null)
   const [previewItem, setPreviewItem] = useState<Invoice | null>(null)
   const [printItem, setPrintItem] = useState<Invoice | null>(null)
 
@@ -545,6 +550,23 @@ export default function InvoicesPage() {
                               <PrinterIcon className="size-3.5" />
                             </Button>
 
+                            {/* Record Payment */}
+                            {item.status !== "Lunas" && (
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => {
+                                  setPaymentPreselectedCust(item.customer_id)
+                                  setPaymentPreselectedInv(item.id)
+                                  setPaymentDialogOpen(true)
+                                }}
+                                title="Catat Pembayaran / Pelunasan"
+                                className="cursor-pointer hover:bg-emerald-500/10 text-emerald-600 active:scale-95 transition-all"
+                              >
+                                <CreditCardIcon className="size-3.5" />
+                              </Button>
+                            )}
+
                             {/* Delete button */}
                             <Button
                               variant="ghost"
@@ -605,6 +627,19 @@ export default function InvoicesPage() {
         onOpenChange={setDialogOpen}
         onSuccess={() => {
           setFeedback("Faktur komersial berhasil diterbitkan!")
+          setTimeout(() => setFeedback(null), 3500)
+          fetchData()
+        }}
+      />
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        preselectedCustomerId={paymentPreselectedCust}
+        preselectedInvoiceId={paymentPreselectedInv}
+        onSuccess={() => {
+          setFeedback("Pembayaran faktur berhasil dicatat!")
           setTimeout(() => setFeedback(null), 3500)
           fetchData()
         }}
