@@ -26,15 +26,10 @@ import {
 import {
   SunIcon,
   MoonIcon,
-  ShieldCheckIcon,
   ShieldAlertIcon,
   KeyRoundIcon,
   ShoppingCartIcon,
-  TruckIcon,
-  CheckCircle2Icon,
   AlertCircleIcon,
-  LockIcon,
-  UnlockIcon,
   RefreshCwIcon,
   CheckIcon,
 } from "lucide-react"
@@ -47,7 +42,6 @@ export default function SystemSettingsPage() {
     has_pin_configured: false,
     force_sales_order_enabled: false,
   })
-  const [loading, setLoading] = useState(true)
   const [feedback, setFeedback] = useState<string | null>(null)
   const [errorFeedback, setErrorFeedback] = useState<string | null>(null)
 
@@ -59,11 +53,10 @@ export default function SystemSettingsPage() {
   const [dialogError, setDialogError] = useState<string | null>(null)
   const [savingPin, setSavingPin] = useState(false)
 
-  // PIN Authorize Dialog State (e.g. for Force SO toggle)
+  // PIN Authorize Dialog State (e.g. for turning ON Force SO)
   const [authDialogOpen, setAuthDialogOpen] = useState(false)
   const [authPin, setAuthPin] = useState("")
   const [authError, setAuthError] = useState<string | null>(null)
-  const [pendingForceState, setPendingForceState] = useState<boolean | null>(null)
   const [verifyingAuth, setVerifyingAuth] = useState(false)
 
   const showSuccess = (msg: string) => {
@@ -79,13 +72,10 @@ export default function SystemSettingsPage() {
 
   const loadSettings = async () => {
     try {
-      setLoading(true)
       const data = await settingService.getSystemSettings()
       setSettings(data)
     } catch {
       showError("Gagal memuat pengaturan sistem.")
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -93,26 +83,16 @@ export default function SystemSettingsPage() {
     loadSettings()
   }, [])
 
-  // Handle Toggle PIN Security
+  // Handle Toggle PIN Security - Direct toggle without entering PIN
   const handleTogglePinSecurity = async () => {
     if (!settings.has_pin_configured && !settings.security_pin_enabled) {
-      // Must setup PIN first
+      // Must setup PIN first if no PIN exists
       setPinDialogOpen(true)
       return
     }
 
     try {
       const nextState = !settings.security_pin_enabled
-      if (!nextState && settings.has_pin_configured) {
-        // Turning off requires PIN if it's currently active
-        // Open Auth dialog to confirm turn off
-        setPendingForceState(null) // indicates PIN toggle
-        setAuthPin("")
-        setAuthError(null)
-        setAuthDialogOpen(true)
-        return
-      }
-
       const res = await settingService.updatePin({ enabled: nextState })
       setSettings(res)
       showSuccess(nextState ? "Keamanan PIN berhasil diaktifkan." : "Keamanan PIN dinonaktifkan.")
@@ -163,34 +143,44 @@ export default function SystemSettingsPage() {
     }
   }
 
-  // Handle Toggle Force Sales Order
+  // Handle Toggle Force Sales Order:
+  // Turning OFF: directly disable without PIN!
+  // Turning ON: require PIN if PIN security is enabled and configured
   const handleToggleForceSalesOrder = async () => {
     const nextState = !settings.force_sales_order_enabled
 
+    // If turning OFF (mematikan), directly disable without PIN
+    if (!nextState) {
+      try {
+        const res = await settingService.updateForceSalesOrder({ enabled: false })
+        setSettings(res)
+        showSuccess("Fitur Force Sales Order dinonaktifkan.")
+      } catch (err: unknown) {
+        const e = err as { response?: { data?: { message?: string } } }
+        showError(e.response?.data?.message || "Gagal menonaktifkan Force Sales Order.")
+      }
+      return
+    }
+
+    // If turning ON: require PIN if security is active & configured
     if (settings.security_pin_enabled && settings.has_pin_configured) {
-      // Require PIN authorization dialog
-      setPendingForceState(nextState)
       setAuthPin("")
       setAuthError(null)
       setAuthDialogOpen(true)
     } else {
       // Direct update if PIN security is disabled
       try {
-        const res = await settingService.updateForceSalesOrder({ enabled: nextState })
+        const res = await settingService.updateForceSalesOrder({ enabled: true })
         setSettings(res)
-        showSuccess(
-          nextState
-            ? "Fitur Paksa Buat Pesanan (Force SO) berhasil diaktifkan."
-            : "Fitur Paksa Buat Pesanan (Force SO) dinonaktifkan."
-        )
+        showSuccess("Fitur Force Sales Order berhasil diaktifkan.")
       } catch (err: unknown) {
         const e = err as { response?: { data?: { message?: string } } }
-        showError(e.response?.data?.message || "Gagal mengubah pengaturan Force Sales Order.")
+        showError(e.response?.data?.message || "Gagal mengaktifkan Force Sales Order.")
       }
     }
   }
 
-  // Handle Auth PIN Submission (for Force SO or turning off PIN)
+  // Handle Auth PIN Submission (only for turning ON Force SO)
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setAuthError(null)
@@ -202,29 +192,13 @@ export default function SystemSettingsPage() {
 
     try {
       setVerifyingAuth(true)
-      if (pendingForceState !== null) {
-        // Toggle Force SO
-        const res = await settingService.updateForceSalesOrder({
-          enabled: pendingForceState,
-          pin: authPin,
-        })
-        setSettings(res)
-        setAuthDialogOpen(false)
-        showSuccess(
-          pendingForceState
-            ? "Fitur Paksa Buat Pesanan (Force SO) berhasil diaktifkan."
-            : "Fitur Paksa Buat Pesanan (Force SO) dinonaktifkan."
-        )
-      } else {
-        // Turning off PIN security
-        const res = await settingService.updatePin({
-          enabled: false,
-          current_pin: authPin,
-        })
-        setSettings(res)
-        setAuthDialogOpen(false)
-        showSuccess("Keamanan PIN berhasil dinonaktifkan.")
-      }
+      const res = await settingService.updateForceSalesOrder({
+        enabled: true,
+        pin: authPin,
+      })
+      setSettings(res)
+      setAuthDialogOpen(false)
+      showSuccess("Fitur Force Sales Order berhasil diaktifkan.")
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } }
       setAuthError(e.response?.data?.message || "PIN tidak valid.")
@@ -278,140 +252,24 @@ export default function SystemSettingsPage() {
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 space-y-6 p-6">
-        {/* Title Header */}
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Pengaturan Sistem & Keamanan</h1>
-            <p className="text-sm text-muted-foreground">
-              Konfigurasi PIN otorisasi supervisor, kebijakan pembuatan pesanan stok kurang (Force SO), dan kepatuhan pengiriman fisik.
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadSettings}
-            disabled={loading}
-            className="flex items-center gap-2 cursor-pointer"
-          >
-            <RefreshCwIcon className={`size-4 ${loading ? "animate-spin" : ""}`} />
-            Muat Ulang
-          </Button>
-        </div>
-
-        {/* Status KPI Cards */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {/* Card 1: PIN Security */}
-          <div className="rounded-xl border bg-card p-5 shadow-xs transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-muted-foreground">Keamanan PIN Otorisasi</span>
-              <div
-                className={`flex size-9 items-center justify-center rounded-lg ${
-                  settings.security_pin_enabled
-                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                    : "bg-slate-500/10 text-slate-500"
-                }`}
-              >
-                {settings.security_pin_enabled ? <ShieldCheckIcon className="size-5" /> : <ShieldAlertIcon className="size-5" />}
-              </div>
-            </div>
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl font-bold">
-                {settings.security_pin_enabled ? "Aktif" : "Nonaktif"}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                ({settings.has_pin_configured ? "PIN 6 Digit Terkonfigurasi" : "Belum Ada PIN"})
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {settings.security_pin_enabled
-                ? "Aksi sensitif & bypass memerlukan verifikasi 6 digit PIN."
-                : "Keamanan otorisasi PIN saat ini tidak diaktifkan."}
-            </p>
-          </div>
-
-          {/* Card 2: Force Sales Order */}
-          <div className="rounded-xl border bg-card p-5 shadow-xs transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-muted-foreground">Force Create Sales Order</span>
-              <div
-                className={`flex size-9 items-center justify-center rounded-lg ${
-                  settings.force_sales_order_enabled
-                    ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                }`}
-              >
-                <ShoppingCartIcon className="size-5" />
-              </div>
-            </div>
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl font-bold">
-                {settings.force_sales_order_enabled ? "Diizinkan" : "Dibatasi"}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {settings.force_sales_order_enabled ? "(Dengan PIN)" : "(Strict Stock)"}
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {settings.force_sales_order_enabled
-                ? "Pesanan boleh dibuat saat stok kurang via otorisasi PIN."
-                : "Pesanan ditolak otomatis jika stok gudang tidak cukup."}
-            </p>
-          </div>
-
-          {/* Card 3: Strict Delivery Restrict */}
-          <div className="rounded-xl border bg-card p-5 shadow-xs transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-muted-foreground">Integritas Pengiriman (Delivery)</span>
-              <div className="flex size-9 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                <TruckIcon className="size-5" />
-              </div>
-            </div>
-            <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                Anti-Minus
-              </span>
-              <span className="text-xs text-muted-foreground">(Restriksi Mutlak)</span>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Pengiriman dibatasi $\le$ stok fisik. Saldo inventaris dijamin bebas nilai negatif.
-            </p>
-          </div>
-        </div>
-
-        {/* Detailed Configuration Section */}
-        <div className="space-y-6">
-          {/* Card Feature 1: PIN Configuration */}
-          <div className="rounded-xl border bg-card p-6 shadow-xs">
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center border-b pb-4">
-              <div className="flex items-start gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary mt-0.5">
-                  <KeyRoundIcon className="size-5" />
+      <div className="flex-1 p-6">
+        {/* Compact Cards: PIN & Force Create (Side by Side) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Card: Keamanan PIN */}
+          <div className="rounded-xl border bg-card p-4 shadow-xs flex flex-col justify-between space-y-4">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
+                    <KeyRoundIcon className="size-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold">Keamanan PIN Otorisasi</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {settings.has_pin_configured ? "PIN 6 digit terkonfigurasi" : "Belum ada PIN"}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold">1. Keamanan & Pengaturan PIN 6 Digit</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Gunakan kode keamanan 6 digit angka untuk mengesahkan tindakan administratif dan bypass pesanan komersial.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setCurrentPin("")
-                    setNewPin("")
-                    setConfirmPin("")
-                    setDialogError(null)
-                    setPinDialogOpen(true)
-                  }}
-                  className="cursor-pointer"
-                >
-                  <KeyRoundIcon className="mr-1.5 size-4 text-primary" />
-                  {settings.has_pin_configured ? "Ubah PIN" : "Atur PIN Baru"}
-                </Button>
 
                 {/* Toggle Button */}
                 <button
@@ -431,39 +289,53 @@ export default function SystemSettingsPage() {
                   />
                 </button>
               </div>
+
+              <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
+                Gunakan kode keamanan 6 digit angka untuk mengesahkan tindakan administratif dan bypass pesanan komersial saat stok kurang.
+              </p>
             </div>
 
-            <div className="mt-4 grid gap-4 text-sm text-muted-foreground sm:grid-cols-2">
-              <div className="flex items-center gap-2">
-                <CheckCircle2Icon className="size-4 text-emerald-500" />
-                <span>Format PIN wajib terdiri dari tepat 6 digit angka numerik (0-9).</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2Icon className="size-4 text-emerald-500" />
-                <span>Disimpan terenkripsi dengan algoritma satu arah SHA-256 dan salt rahasia.</span>
-              </div>
+            <div className="pt-3 border-t flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">
+                Status:{" "}
+                <span className={settings.security_pin_enabled ? "text-emerald-600 dark:text-emerald-400 font-semibold" : "text-muted-foreground font-semibold"}>
+                  {settings.security_pin_enabled ? "Aktif" : "Nonaktif"}
+                </span>
+              </span>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setCurrentPin("")
+                  setNewPin("")
+                  setConfirmPin("")
+                  setDialogError(null)
+                  setPinDialogOpen(true)
+                }}
+                className="h-8 text-xs cursor-pointer"
+              >
+                <KeyRoundIcon className="mr-1.5 size-3.5 text-primary" />
+                {settings.has_pin_configured ? "Ubah PIN" : "Atur PIN Baru"}
+              </Button>
             </div>
           </div>
 
-          {/* Card Feature 2: Force Sales Order Configuration */}
-          <div className="rounded-xl border bg-card p-6 shadow-xs">
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center border-b pb-4">
-              <div className="flex items-start gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 mt-0.5">
-                  <ShoppingCartIcon className="size-5" />
+          {/* Card: Force Create Sales Order */}
+          <div className="rounded-xl border bg-card p-4 shadow-xs flex flex-col justify-between space-y-4">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex size-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
+                    <ShoppingCartIcon className="size-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold">Force Create Sales Order</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Pemesanan saat stok kurang (Backorder)
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold">2. Kebijakan Force Create Sales Order (Backorder)</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Izinkan pembuat pesanan untuk tetap menerbitkan Sales Order meskipun stok fisik di gudang kurang atau kosong.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium">
-                  {settings.force_sales_order_enabled ? "Aktif (Diizinkan)" : "Nonaktif (Dilarang)"}
-                </span>
 
                 {/* Toggle Button */}
                 <button
@@ -483,55 +355,19 @@ export default function SystemSettingsPage() {
                   />
                 </button>
               </div>
-            </div>
 
-            <div className="mt-4 space-y-2 text-sm text-muted-foreground">
-              <p>
-                <strong>Cara Kerja di Modul Penjualan:</strong> Saat staf penjualan membuat Sales Order dengan kuantitas yang melebihi stok tersedia:
+              <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
+                Izinkan staf penjualan menerbitkan Sales Order walaupun stok gudang tidak mencukupi, dengan otorisasi 6 digit PIN saat pesanan dibuat.
               </p>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>
-                  Jika opsi ini <strong>AKTIF</strong>: Sistem memunculkan modal dialog otorisasi PIN 6 digit. Setelah PIN diverifikasi benar, Sales Order berhasil dibuat dengan penanda audit backorder.
-                </li>
-                <li>
-                  Jika opsi ini <strong>NONAKTIF</strong>: Pembuatan Sales Order otomatis ditolak dengan pesan error validasi bahwa stok tidak mencukupi.
-                </li>
-              </ul>
             </div>
-          </div>
 
-          {/* Card Feature 3: Strict Delivery Restriction Guardrail */}
-          <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-6 shadow-xs dark:border-indigo-900/50 dark:bg-indigo-950/20">
-            <div className="flex items-start gap-3">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-indigo-600 text-white mt-0.5">
-                <TruckIcon className="size-5" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-lg font-semibold text-indigo-950 dark:text-indigo-200">
-                  3. Restriksi Mutlak Pengiriman Barang (Anti-Minus Stock Guardrail)
-                </h3>
-                <p className="text-sm text-indigo-900/80 dark:text-indigo-300/80 leading-relaxed">
-                  Sales Order hanyalah perikatan komersial yang <strong>tidak memotong stok fisik</strong>. Namun, pada proses Pengiriman (Surat Jalan / Delivery), sistem memotong stok gudang secara riil. Untuk mencegah timbulnya saldo stok negatif (mines), sistem menerapkan restriksi mutlak:
-                </p>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2 pt-2">
-                  <div className="rounded-lg bg-white/80 p-3 shadow-2xs dark:bg-slate-900/80">
-                    <p className="text-xs font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1">
-                      <LockIcon className="size-3.5" /> Dilarang Kirim Melebihi Stok Fisik
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Kuantitas pengiriman surat jalan dibatasi maksimal sebesar stok fisik yang ada di gudang (<code className="text-2xs bg-muted px-1 py-0.5 rounded">qty &le; physicalStock</code>).
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-white/80 p-3 shadow-2xs dark:bg-slate-900/80">
-                    <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                      <UnlockIcon className="size-3.5" /> Solusi Pemenuhan Bertahap
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Gunakan <strong>Partial Delivery</strong> untuk barang yang tersedia, dan lakukan <strong>Penerimaan Stok (Stock In)</strong> sebelum menerbitkan surat jalan berikutnya.
-                    </p>
-                  </div>
-                </div>
-              </div>
+            <div className="pt-3 border-t flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">
+                Status:{" "}
+                <span className={settings.force_sales_order_enabled ? "text-blue-600 dark:text-blue-400 font-semibold" : "text-muted-foreground font-semibold"}>
+                  {settings.force_sales_order_enabled ? "Diizinkan (Otorisasi PIN)" : "Dibatasi (Strict Stock)"}
+                </span>
+              </span>
             </div>
           </div>
         </div>
@@ -628,11 +464,7 @@ export default function SystemSettingsPage() {
               Otorisasi PIN Diperlukan
             </DialogTitle>
             <DialogDescription>
-              {pendingForceState !== null
-                ? `Masukkan PIN 6 digit untuk ${
-                    pendingForceState ? "mengaktifkan" : "menonaktifkan"
-                  } izin Force Create Sales Order.`
-                : "Masukkan PIN 6 digit untuk menonaktifkan fitur keamanan PIN."}
+              Masukkan PIN 6 digit untuk mengesahkan pengaktifan fitur Force Create Sales Order.
             </DialogDescription>
           </DialogHeader>
 
