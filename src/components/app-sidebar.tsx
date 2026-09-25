@@ -127,6 +127,10 @@ const sidebarData = {
           title: "Daftar Warehouse",
           url: "/settings/warehouses",
         },
+        {
+          title: "Pengaturan Sistem",
+          url: "/settings/system",
+        },
       ],
     },
   ] as NavItem[],

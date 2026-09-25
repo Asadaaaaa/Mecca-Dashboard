@@ -15,6 +15,7 @@ import PaymentsPage from "@/pages/sales/payments-page"
 import UsersPage from "@/pages/settings/users-page"
 import RolesPage from "@/pages/settings/roles-page"
 import WarehousesPage from "@/pages/settings/warehouses-page"
+import SystemSettingsPage from "@/pages/settings/system-page"
 import LoginPage from "@/pages/login-page"
 import { authService } from "@/services/auth.service"
 
@@ -69,6 +70,7 @@ export function App() {
           <Route path="/settings/users" element={<UsersPage />} />
           <Route path="/settings/roles" element={<RolesPage />} />
           <Route path="/settings/warehouses" element={<WarehousesPage />} />
+          <Route path="/settings/system" element={<SystemSettingsPage />} />
         </Route>
 
         {/* Fallback */}

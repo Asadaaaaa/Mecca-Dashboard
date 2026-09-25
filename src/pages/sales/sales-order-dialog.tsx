@@ -14,11 +14,12 @@ import { salesOrderService } from "@/services/sales-order.service"
 import { customerService } from "@/services/customer.service"
 import { warehouseService } from "@/services/warehouse.service"
 import { productService } from "@/services/product.service"
+import { settingService } from "@/services/setting.service"
 import type { Customer } from "@/types/customer.types"
-import type { Warehouse } from "@/types/settings.types"
+import type { Warehouse, SystemSettings } from "@/types/settings.types"
 import type { Product } from "@/types/product.types"
 import type { AvailableStockInfo } from "@/types/sales-order.types"
-import { Loader2Icon, ShoppingCartIcon, PlusIcon, Trash2Icon } from "lucide-react"
+import { Loader2Icon, ShoppingCartIcon, PlusIcon, Trash2Icon, ShieldAlertIcon } from "lucide-react"
 
 interface SalesOrderDialogProps {
   open: boolean
@@ -50,6 +51,16 @@ export function SalesOrderDialog({
   const [notes, setNotes] = useState("")
   const [items, setItems] = useState<ItemRow[]>([])
   const [stockMap, setStockMap] = useState<Record<number, AvailableStockInfo>>({})
+
+  // System Settings & PIN Authorization Modal States
+  const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null)
+  const [pinModalOpen, setPinModalOpen] = useState(false)
+  const [pinInput, setPinInput] = useState("")
+  const [pinError, setPinError] = useState<string | null>(null)
+  const [submittingPin, setSubmittingPin] = useState(false)
+  const [insufficientList, setInsufficientList] = useState<
+    { name: string; requested: number; available: number; physical: number }[]
+  >([])
 
   const fetchStock = async (wId: number, pId: number) => {
     if (!wId || !pId) return
@@ -96,6 +107,9 @@ export function SalesOrderDialog({
       productService.getProducts({ limit: 100 }).then((res) => {
         if (res.items?.length) setProducts(res.items)
       }).catch(() => {})
+
+      // Load system settings (PIN & Force SO policy)
+      settingService.getSystemSettings().then((s) => setSystemSettings(s)).catch(() => {})
     }
   }, [open])
 
@@ -138,6 +152,43 @@ export function SalesOrderDialog({
     return items.reduce((sum, item) => sum + (item.quantity * item.unit_price || 0), 0)
   }
 
+  const executeCreateSo = async (force: boolean = false, pin?: string) => {
+    const validItems = items.filter((it) => it.product_id > 0 && it.quantity > 0)
+    setLoading(true)
+    setError(null)
+    setPinError(null)
+
+    try {
+      await salesOrderService.createSalesOrder({
+        customer_id: Number(customerId),
+        warehouse_id: warehouseId ? Number(warehouseId) : undefined,
+        order_date: orderDate,
+        notes: notes || undefined,
+        force_override: force ? true : undefined,
+        pin: force ? pin : undefined,
+        items: validItems.map((it) => ({
+          product_id: it.product_id,
+          quantity: Number(it.quantity),
+          unit_price: Number(it.unit_price),
+        })),
+      })
+      if (pinModalOpen) setPinModalOpen(false)
+      onOpenChange(false)
+      onSuccess()
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } }; message?: string }
+      const errMsg = e.response?.data?.message || e.message || "Gagal membuat Sales Order."
+      if (force) {
+        setPinError(errMsg)
+      } else {
+        setError(errMsg)
+      }
+    } finally {
+      setLoading(false)
+      setSubmittingPin(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!customerId) {
@@ -151,44 +202,56 @@ export function SalesOrderDialog({
       return
     }
 
-    // Strict validation: Check available stock before submitting
+    // Check available stock before submitting
+    const shortages: { name: string; requested: number; available: number; physical: number }[] = []
     for (const it of validItems) {
       const stock = stockMap[it.product_id]
       if (stock && it.quantity > stock.availableStock) {
         const prod = products.find((p) => p.id === it.product_id)
-        const pName = prod?.name || `Produk #${it.product_id}`
-        setError(`Stok tidak mencukupi untuk "${pName}". Stok tersedia: ${stock.availableStock} (Fisik: ${stock.physicalStock}, Terpesan di SO aktif: ${stock.reservedStock}), diminta: ${it.quantity}. Harap sesuaikan pesanan.`)
-        return
+        shortages.push({
+          name: prod?.name || `Produk #${it.product_id}`,
+          requested: it.quantity,
+          available: stock.availableStock,
+          physical: stock.physicalStock,
+        })
       }
     }
 
-    setLoading(true)
-    setError(null)
+    if (shortages.length > 0) {
+      // Check if force SO is enabled in system settings
+      if (!systemSettings?.force_sales_order_enabled) {
+        const first = shortages[0]
+        setError(
+          `Stok tidak mencukupi untuk "${first.name}". Stok tersedia: ${first.available} (Fisik: ${first.physical}), diminta: ${first.requested}. Fitur Paksa Buat Sales Order (Force SO) dinonaktifkan di Pengaturan Sistem.`
+        )
+        return
+      }
 
-    try {
-      await salesOrderService.createSalesOrder({
-        customer_id: Number(customerId),
-        warehouse_id: warehouseId ? Number(warehouseId) : undefined,
-        order_date: orderDate,
-        notes: notes || undefined,
-        items: validItems.map((it) => ({
-          product_id: it.product_id,
-          quantity: Number(it.quantity),
-          unit_price: Number(it.unit_price),
-        })),
-      })
-      onOpenChange(false)
-      onSuccess()
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } }; message?: string }
-      setError(e.response?.data?.message || e.message || "Gagal membuat Sales Order.")
-    } finally {
-      setLoading(false)
+      // If force SO is enabled, open the PIN modal for authorization
+      setInsufficientList(shortages)
+      setPinInput("")
+      setPinError(null)
+      setPinModalOpen(true)
+      return
     }
+
+    await executeCreateSo(false)
+  }
+
+  const handlePinSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPinError(null)
+    if (!/^\d{6}$/.test(pinInput)) {
+      setPinError("Masukkan 6 digit angka PIN otorisasi.")
+      return
+    }
+    setSubmittingPin(true)
+    await executeCreateSo(true, pinInput)
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-3">
@@ -398,5 +461,93 @@ export function SalesOrderDialog({
         </form>
       </DialogContent>
     </Dialog>
+
+    {/* Sub-modal: Otorisasi PIN Force Create Sales Order */}
+    <Dialog open={pinModalOpen} onOpenChange={setPinModalOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <ShieldAlertIcon className="size-5" />
+            </div>
+            <div>
+              <DialogTitle className="text-base font-semibold">Otorisasi Paksa Sales Order</DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                Stok tidak mencukupi. Masukkan 6 digit PIN untuk otorisasi pesanan (Backorder).
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        {pinError && (
+          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md text-red-500 text-xs">
+            {pinError}
+          </div>
+        )}
+
+        {/* List of items that have shortage */}
+        <div className="space-y-2 rounded-lg bg-muted/40 p-3 text-xs border border-border/60">
+          <span className="font-semibold text-muted-foreground text-[11px] uppercase tracking-wider block">
+            Daftar Kekurangan Stok:
+          </span>
+          <div className="space-y-1.5">
+            {insufficientList.map((item, i) => (
+              <div key={i} className="flex justify-between items-center text-xs">
+                <span className="font-medium text-foreground">{item.name}</span>
+                <div className="text-right">
+                  <span className="text-muted-foreground">Tersedia: {item.available} | </span>
+                  <span className="font-semibold text-rose-600 dark:text-rose-400">Diminta: {item.requested}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <form onSubmit={handlePinSubmit} className="space-y-4 py-1">
+          <div className="space-y-2">
+            <Label htmlFor="so-pin-input" className="text-xs font-medium">
+              PIN Keamanan 6 Digit *
+            </Label>
+            <Input
+              id="so-pin-input"
+              type="password"
+              maxLength={6}
+              placeholder="••••••"
+              value={pinInput}
+              onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ""))}
+              className="tracking-widest text-center text-2xl font-mono py-5"
+              autoFocus
+              required
+            />
+            <p className="text-[11px] text-muted-foreground text-center">
+              Pesanan akan disetujui paksa via PIN. Surat jalan (pengiriman) tetap dibatasi oleh stok fisik riil.
+            </p>
+          </div>
+
+          <DialogFooter className="pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setPinModalOpen(false)}
+              disabled={submittingPin}
+              className="text-xs"
+            >
+              Batal
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={submittingPin || pinInput.length !== 6}
+              className="text-xs gap-1.5 bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {submittingPin && <Loader2Icon className="size-3.5 animate-spin" />}
+              Otorisasi & Simpan SO
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { deliveryService } from "@/services/delivery.service"
 import { salesOrderService } from "@/services/sales-order.service"
 import type { SalesOrder } from "@/types/sales-order.types"
-import { Loader2Icon, TruckIcon } from "lucide-react"
+import { Loader2Icon, TruckIcon, ShieldAlertIcon } from "lucide-react"
 
 interface DeliveryDialogProps {
   open: boolean
@@ -30,6 +30,7 @@ interface DeliveryItemRow {
   orderedQty: number
   deliveredQty: number
   remainingQty: number
+  physicalStock: number
   shipQty: number
 }
 
@@ -86,21 +87,35 @@ export function DeliveryDialog({
       const so = await salesOrderService.getSalesOrderById(soId)
       setSelectedSo(so)
       if (so && so.items) {
-        const rows: DeliveryItemRow[] = so.items.map((it) => {
-          const ord = it.quantity || 0
-          const del = it.delivered_quantity || 0
-          const rem = Math.max(0, ord - del)
-          return {
-            sales_order_item_id: it.id || 0,
-            product_id: it.product_id,
-            productCode: it.product?.code || it.productCode || "-",
-            productName: it.product?.name || it.productName || "-",
-            orderedQty: ord,
-            deliveredQty: del,
-            remainingQty: rem,
-            shipQty: rem, // default to remaining
-          }
-        })
+        const warehouseId = so.warehouse_id || 1
+        const rows: DeliveryItemRow[] = await Promise.all(
+          so.items.map(async (it) => {
+            const ord = it.quantity || 0
+            const del = it.delivered_quantity || 0
+            const rem = Math.max(0, ord - del)
+            let phys = 0
+            try {
+              if (warehouseId) {
+                const stock = await salesOrderService.getAvailableStock(warehouseId, it.product_id)
+                phys = Number(stock.physicalStock) || 0
+              }
+            } catch {
+              // fallback
+            }
+
+            return {
+              sales_order_item_id: it.id || 0,
+              product_id: it.product_id,
+              productCode: it.product?.code || it.productCode || "-",
+              productName: it.product?.name || it.productName || "-",
+              orderedQty: ord,
+              deliveredQty: del,
+              remainingQty: rem,
+              physicalStock: phys,
+              shipQty: Math.min(rem, Math.max(0, phys)),
+            }
+          })
+        )
         setItems(rows)
       }
     } catch {
@@ -142,10 +157,16 @@ export function DeliveryDialog({
       return
     }
 
-    // Check if any shipQty exceeds remaining
+    // Check if any shipQty exceeds remaining or physical stock
     for (const it of validItems) {
       if (it.shipQty > it.remainingQty) {
-        setError(`Jumlah kirim untuk ${it.productName} melebihi sisa pesanan (${it.remainingQty}).`)
+        setError(`Jumlah kirim untuk "${it.productName}" melebihi sisa pesanan (${it.remainingQty}).`)
+        return
+      }
+      if (it.shipQty > it.physicalStock) {
+        setError(
+          `Jumlah kirim untuk "${it.productName}" (${it.shipQty}) melebihi stok fisik gudang (${it.physicalStock}). Pengiriman tidak dapat dilakukan untuk mencegah stok fisik menjadi minus.`
+        )
         return
       }
     }
@@ -292,31 +313,80 @@ export function DeliveryDialog({
               </div>
             ) : (
               <div className="space-y-2">
-                {items.map((row, idx) => (
-                  <div key={idx} className="flex items-center justify-between gap-3 bg-muted/30 p-2.5 rounded-md border border-border/50 text-xs">
-                    <div className="flex-1">
-                      <div className="font-semibold text-foreground">{row.productName}</div>
-                      <div className="text-[10px] text-muted-foreground">
-                        Kode: {row.productCode} | Dipesan: {row.orderedQty} | Terkirim: {row.deliveredQty} | Sisa: {row.remainingQty}
+                {items.map((row, idx) => {
+                  const isExceededPhysical = row.shipQty > row.physicalStock
+                  const isOutOfStock = row.physicalStock <= 0
+
+                  return (
+                    <div
+                      key={idx}
+                      className={`space-y-1.5 bg-muted/30 p-2.5 rounded-md border text-xs transition-colors ${
+                        isExceededPhysical ? "border-red-500/50 bg-red-500/5" : "border-border/50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex-1">
+                          <div className="font-semibold text-foreground flex items-center gap-2">
+                            {row.productName}
+                            {isOutOfStock && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-600 dark:text-red-400 font-medium">
+                                Stok Fisik Kosong
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">
+                            Kode: {row.productCode} | Dipesan: {row.orderedQty} | Terkirim: {row.deliveredQty} | Sisa SO: {row.remainingQty}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-muted-foreground">Kirim:</span>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={Math.min(row.remainingQty, Math.max(0, row.physicalStock))}
+                            value={row.shipQty}
+                            onChange={(e) => handleShipQtyChange(idx, parseFloat(e.target.value) || 0)}
+                            className={`text-xs h-8 w-24 text-right font-mono ${
+                              isExceededPhysical ? "border-red-500 text-red-500 font-bold focus-visible:ring-red-500" : ""
+                            }`}
+                          />
+                          <span className="text-[11px] text-muted-foreground">Unit</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] px-1 pt-1 border-t border-border/40">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground">Stok Fisik Gudang:</span>
+                          <span
+                            className={
+                              row.physicalStock > 0
+                                ? "text-emerald-600 dark:text-emerald-400 font-semibold"
+                                : "text-red-500 font-semibold"
+                            }
+                          >
+                            {row.physicalStock} Unit
+                          </span>
+                        </div>
+                        {isExceededPhysical && (
+                          <span className="text-red-500 font-medium flex items-center gap-1">
+                            ⚠️ Melebihi stok fisik gudang ({row.physicalStock}) - Dilarang agar stok tidak minus!
+                          </span>
+                        )}
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-muted-foreground">Kirim:</span>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={row.remainingQty}
-                        value={row.shipQty}
-                        onChange={(e) => handleShipQtyChange(idx, parseFloat(e.target.value) || 0)}
-                        className="text-xs h-8 w-24 text-right font-mono"
-                      />
-                      <span className="text-[11px] text-muted-foreground">Unit</span>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
+
+            {/* Anti-Minus Stock Guardrail Banner */}
+            <div className="p-2.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-[11px] text-indigo-700 dark:text-indigo-300 flex items-center gap-2">
+              <ShieldAlertIcon className="size-4 shrink-0 text-indigo-500" />
+              <span>
+                <strong>Restriksi Mutlak Anti-Minus:</strong> Surat Jalan memotong stok fisik riil gudang. Pengiriman tidak dapat melebihi stok fisik yang tersedia dan tidak dapat di-bypass via PIN.
+              </span>
+            </div>
           </div>
 
           <DialogFooter className="pt-4 border-t">

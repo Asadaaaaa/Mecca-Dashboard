@@ -106,3 +106,22 @@ export interface UserFormData {
   status: "active" | "inactive" | "suspended"
   role_ids?: number[]
 }
+
+export interface SystemSettings {
+  security_pin_enabled: boolean
+  has_pin_configured: boolean
+  force_sales_order_enabled: boolean
+  updated_at?: string
+}
+
+export interface PinUpdatePayload {
+  enabled?: boolean
+  pin?: string
+  current_pin?: string
+}
+
+export interface ForceSOUpdatePayload {
+  enabled: boolean
+  pin?: string
+}
+

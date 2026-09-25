@@ -86,6 +86,8 @@ export interface SalesOrderFormData {
   notes?: string
   discount_amount?: number
   tax_amount?: number
+  force_override?: boolean
+  pin?: string
   items: {
     product_id: number
     quantity: number
