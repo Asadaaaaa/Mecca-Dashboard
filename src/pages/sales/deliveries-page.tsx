@@ -424,7 +424,9 @@ export default function DeliveriesPage() {
                         <td className="p-3 font-mono text-muted-foreground">{item.refOrder}</td>
                         <td className="p-3 font-medium text-foreground">{item.customerName}</td>
                         <td className="p-3 text-muted-foreground">{item.courierFleet || "-"}</td>
-                        <td className="p-3 text-muted-foreground">{item.warehouse || "Gudang Utama"}</td>
+                        <td className="p-3 text-muted-foreground">
+                          {typeof item.warehouse === "object" ? item.warehouse?.name : item.warehouse || "Gudang Utama"}
+                        </td>
                         <td className="p-3 text-right font-mono font-medium text-foreground">{item.totalItems} Unit</td>
                         <td className="p-3 text-center">
                           <span
@@ -597,7 +599,9 @@ export default function DeliveriesPage() {
               <div className="grid grid-cols-2 gap-2 bg-muted/30 p-3 rounded-lg border">
                 <div>
                   <span className="text-muted-foreground">Gudang Asal: </span>
-                  <span className="font-semibold text-foreground">{previewItem.warehouse || "Gudang Utama Cakung"}</span>
+                  <span className="font-semibold text-foreground">
+                    {typeof previewItem.warehouse === "object" ? previewItem.warehouse?.name : previewItem.warehouse || "Gudang Utama Cakung"}
+                  </span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Tanggal Kirim: </span>
@@ -694,7 +698,9 @@ export default function DeliveriesPage() {
                 <div className="bg-slate-50 p-2.5 rounded border border-slate-200">
                   <div className="font-semibold text-slate-700 uppercase tracking-wider text-[10px]">Detail Ekspedisi:</div>
                   <div className="font-bold text-slate-900 mt-1">Armada: {printItem.courierFleet || "-"}</div>
-                  <div className="text-slate-600 text-[11px] mt-0.5">Gudang: {printItem.warehouse || "Gudang Utama"}</div>
+                  <div className="text-slate-600 text-[11px] mt-0.5">
+                    Gudang: {typeof printItem.warehouse === "object" ? printItem.warehouse?.name : printItem.warehouse || "Gudang Utama"}
+                  </div>
                   <div className="text-slate-600 text-[11px]">Resi: {printItem.trackingNumber || "-"}</div>
                 </div>
               </div>

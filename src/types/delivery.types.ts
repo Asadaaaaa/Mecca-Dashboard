@@ -24,9 +24,17 @@ export interface Delivery {
   sales_order_id: number
   date: string
   customer_id: number
-  customerName: string
+  customerName?: string
+  customer?: {
+    id?: number
+    name?: string
+  }
   warehouse_id?: number
-  warehouse?: string
+  warehouse?: string | {
+    id?: number
+    code?: string
+    name?: string
+  }
   courierFleet?: string
   trackingNumber?: string
   totalItems: number

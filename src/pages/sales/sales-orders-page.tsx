@@ -415,7 +415,9 @@ export default function SalesOrdersPage() {
                         </td>
                         <td className="p-3 text-muted-foreground">{item.date}</td>
                         <td className="p-3 font-medium text-foreground">{item.customerName}</td>
-                        <td className="p-3 text-muted-foreground">{item.warehouse || "Gudang Utama"}</td>
+                        <td className="p-3 text-muted-foreground">
+                          {typeof item.warehouse === "object" ? item.warehouse?.name : item.warehouse || "Gudang Utama"}
+                        </td>
                         <td className="p-3 text-right font-mono font-medium">
                           <div>{item.totalQty} Unit</div>
                           <div className="text-[10px] text-muted-foreground">Terkirim: {item.totalDeliveredQty ?? 0}</div>
@@ -587,7 +589,9 @@ export default function SalesOrdersPage() {
               <div className="grid grid-cols-2 gap-2 bg-muted/30 p-3 rounded-lg border">
                 <div>
                   <span className="text-muted-foreground">Gudang Pengambilan: </span>
-                  <span className="font-semibold text-foreground">{previewItem.warehouse || "Gudang Utama"}</span>
+                  <span className="font-semibold text-foreground">
+                    {typeof previewItem.warehouse === "object" ? previewItem.warehouse?.name : previewItem.warehouse || "Gudang Utama"}
+                  </span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Ref. Quotation: </span>

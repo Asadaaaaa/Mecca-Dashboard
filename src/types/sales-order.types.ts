@@ -26,7 +26,7 @@ export interface SalesOrder {
   refQuotation?: string
   quotation_id?: number | null
   customer_id: number
-  customerName: string
+  customerName?: string
   customer?: {
     id: number
     name: string
@@ -34,7 +34,11 @@ export interface SalesOrder {
     address?: string
   }
   warehouse_id?: number | null
-  warehouse?: string
+  warehouse?: string | {
+    id?: number
+    code?: string
+    name?: string
+  }
   date: string
   subtotal: number
   discount_amount: number

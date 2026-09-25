@@ -244,11 +244,17 @@ export function DeliveryDialog({
               <div className="sm:col-span-2 bg-muted/40 p-2.5 rounded-lg border border-border/60 text-xs flex justify-between items-center">
                 <div>
                   <span className="text-muted-foreground">Customer: </span>
-                  <span className="font-semibold text-foreground">{selectedSo.customerName}</span>
+                  <span className="font-semibold text-foreground">
+                    {selectedSo.customerName || (typeof selectedSo.customer === "object" ? selectedSo.customer?.name : selectedSo.customer) || "-"}
+                  </span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Gudang: </span>
-                  <span className="font-semibold text-foreground">{selectedSo.warehouse || "Gudang Utama Cakung"}</span>
+                  <span className="font-semibold text-foreground">
+                    {typeof selectedSo.warehouse === "object"
+                      ? selectedSo.warehouse?.name || "Gudang Utama Cakung"
+                      : selectedSo.warehouse || "Gudang Utama Cakung"}
+                  </span>
                 </div>
               </div>
             )}
