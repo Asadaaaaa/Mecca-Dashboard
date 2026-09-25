@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom"
 import {
   Avatar,
   AvatarFallback,
@@ -20,10 +21,9 @@ import {
 } from "@/components/ui/sidebar"
 import {
   ChevronsUpDownIcon,
-  BadgeCheckIcon,
-  BellIcon,
   LogOutIcon,
   ShieldCheckIcon,
+  SlidersHorizontalIcon,
 } from "lucide-react"
 import { authService } from "@/services/auth.service"
 
@@ -37,6 +37,7 @@ export function NavUser({
     role?: string
   }
 }) {
+  const navigate = useNavigate()
   const { isMobile } = useSidebar()
   const currentUser = authService.getUser()
 
@@ -112,13 +113,12 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <BadgeCheckIcon className="mr-2 size-4" />
-                Profil Pengguna
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <BellIcon className="mr-2 size-4" />
-                Notifikasi
+              <DropdownMenuItem
+                onClick={() => navigate("/settings/system")}
+                className="cursor-pointer"
+              >
+                <SlidersHorizontalIcon className="mr-2 size-4" />
+                Pengaturan Sistem
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
@@ -127,7 +127,7 @@ export function NavUser({
               className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
             >
               <LogOutIcon className="mr-2 size-4" />
-              Keluar (Log out)
+              Logout
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
