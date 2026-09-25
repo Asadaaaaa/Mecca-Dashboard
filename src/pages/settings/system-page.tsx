@@ -47,14 +47,16 @@ export default function SystemSettingsPage() {
 
   // PIN Setup / Change Dialog State
   const [pinDialogOpen, setPinDialogOpen] = useState(false)
+  const [isChangingPin, setIsChangingPin] = useState(false)
   const [currentPin, setCurrentPin] = useState("")
   const [newPin, setNewPin] = useState("")
   const [confirmPin, setConfirmPin] = useState("")
   const [dialogError, setDialogError] = useState<string | null>(null)
   const [savingPin, setSavingPin] = useState(false)
 
-  // PIN Authorize Dialog State (e.g. for turning ON Force SO)
+  // PIN Authorize Dialog State (for turning OFF PIN or turning ON Force SO)
   const [authDialogOpen, setAuthDialogOpen] = useState(false)
+  const [authMode, setAuthMode] = useState<"TURN_OFF_PIN" | "ENABLE_FORCE_SO">("ENABLE_FORCE_SO")
   const [authPin, setAuthPin] = useState("")
   const [authError, setAuthError] = useState<string | null>(null)
   const [verifyingAuth, setVerifyingAuth] = useState(false)
@@ -83,22 +85,24 @@ export default function SystemSettingsPage() {
     loadSettings()
   }, [])
 
-  // Handle Toggle PIN Security - Direct toggle without entering PIN
+  // Handle Toggle PIN Security:
+  // Turning OFF: user MUST enter current PIN first
+  // Turning ON (dinyalakan lagi): user MUST enter a new 6-digit PIN
   const handleTogglePinSecurity = async () => {
-    if (!settings.has_pin_configured && !settings.security_pin_enabled) {
-      // Must setup PIN first if no PIN exists
+    if (settings.security_pin_enabled) {
+      // From ON -> OFF: enter current PIN first
+      setAuthMode("TURN_OFF_PIN")
+      setAuthPin("")
+      setAuthError(null)
+      setAuthDialogOpen(true)
+    } else {
+      // From OFF -> ON: enter new PIN
+      setIsChangingPin(false)
+      setCurrentPin("")
+      setNewPin("")
+      setConfirmPin("")
+      setDialogError(null)
       setPinDialogOpen(true)
-      return
-    }
-
-    try {
-      const nextState = !settings.security_pin_enabled
-      const res = await settingService.updatePin({ enabled: nextState })
-      setSettings(res)
-      showSuccess(nextState ? "Keamanan PIN berhasil diaktifkan." : "Keamanan PIN dinonaktifkan.")
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } }
-      showError(e.response?.data?.message || "Gagal mengubah status PIN.")
     }
   }
 
@@ -107,7 +111,7 @@ export default function SystemSettingsPage() {
     e.preventDefault()
     setDialogError(null)
 
-    if (settings.has_pin_configured && settings.security_pin_enabled && !currentPin) {
+    if (isChangingPin && !currentPin) {
       setDialogError("PIN saat ini wajib diisi.")
       return
     }
@@ -127,14 +131,14 @@ export default function SystemSettingsPage() {
       const res = await settingService.updatePin({
         enabled: true,
         pin: newPin,
-        current_pin: settings.has_pin_configured && settings.security_pin_enabled ? currentPin : undefined,
+        current_pin: isChangingPin ? currentPin : undefined,
       })
       setSettings(res)
       setPinDialogOpen(false)
       setCurrentPin("")
       setNewPin("")
       setConfirmPin("")
-      showSuccess("PIN 6 digit berhasil disimpan dan diaktifkan!")
+      showSuccess(isChangingPin ? "PIN 6 digit berhasil diubah!" : "Keamanan PIN berhasil diaktifkan dengan PIN baru!")
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } }
       setDialogError(e.response?.data?.message || "Gagal menyimpan PIN.")
@@ -144,9 +148,15 @@ export default function SystemSettingsPage() {
   }
 
   // Handle Toggle Force Sales Order:
-  // Turning OFF: directly disable without PIN!
-  // Turning ON: require PIN if PIN security is enabled and configured
+  // Requires Keamanan PIN Otorisasi to be ON!
+  // Turning OFF: directly disable without PIN
+  // Turning ON: require PIN
   const handleToggleForceSalesOrder = async () => {
+    if (!settings.security_pin_enabled) {
+      showError("Keamanan PIN Otorisasi harus dinyalakan terlebih dahulu.")
+      return
+    }
+
     const nextState = !settings.force_sales_order_enabled
 
     // If turning OFF (mematikan), directly disable without PIN
@@ -162,25 +172,14 @@ export default function SystemSettingsPage() {
       return
     }
 
-    // If turning ON: require PIN if security is active & configured
-    if (settings.security_pin_enabled && settings.has_pin_configured) {
-      setAuthPin("")
-      setAuthError(null)
-      setAuthDialogOpen(true)
-    } else {
-      // Direct update if PIN security is disabled
-      try {
-        const res = await settingService.updateForceSalesOrder({ enabled: true })
-        setSettings(res)
-        showSuccess("Fitur Force Sales Order berhasil diaktifkan.")
-      } catch (err: unknown) {
-        const e = err as { response?: { data?: { message?: string } } }
-        showError(e.response?.data?.message || "Gagal mengaktifkan Force Sales Order.")
-      }
-    }
+    // If turning ON: require PIN authorization
+    setAuthMode("ENABLE_FORCE_SO")
+    setAuthPin("")
+    setAuthError(null)
+    setAuthDialogOpen(true)
   }
 
-  // Handle Auth PIN Submission (only for turning ON Force SO)
+  // Handle Auth PIN Submission (for turning OFF PIN or turning ON Force SO)
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setAuthError(null)
@@ -192,13 +191,23 @@ export default function SystemSettingsPage() {
 
     try {
       setVerifyingAuth(true)
-      const res = await settingService.updateForceSalesOrder({
-        enabled: true,
-        pin: authPin,
-      })
-      setSettings(res)
-      setAuthDialogOpen(false)
-      showSuccess("Fitur Force Sales Order berhasil diaktifkan.")
+      if (authMode === "TURN_OFF_PIN") {
+        const res = await settingService.updatePin({
+          enabled: false,
+          current_pin: authPin,
+        })
+        setSettings(res)
+        setAuthDialogOpen(false)
+        showSuccess("Keamanan PIN berhasil dinonaktifkan.")
+      } else {
+        const res = await settingService.updateForceSalesOrder({
+          enabled: true,
+          pin: authPin,
+        })
+        setSettings(res)
+        setAuthDialogOpen(false)
+        showSuccess("Fitur Force Sales Order berhasil diaktifkan.")
+      }
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } }
       setAuthError(e.response?.data?.message || "PIN tidak valid.")
@@ -295,30 +304,26 @@ export default function SystemSettingsPage() {
               </p>
             </div>
 
-            <div className="pt-3 border-t flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">
-                Status:{" "}
-                <span className={settings.security_pin_enabled ? "text-emerald-600 dark:text-emerald-400 font-semibold" : "text-muted-foreground font-semibold"}>
-                  {settings.security_pin_enabled ? "Aktif" : "Nonaktif"}
-                </span>
-              </span>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setCurrentPin("")
-                  setNewPin("")
-                  setConfirmPin("")
-                  setDialogError(null)
-                  setPinDialogOpen(true)
-                }}
-                className="h-8 text-xs cursor-pointer"
-              >
-                <KeyRoundIcon className="mr-1.5 size-3.5 text-primary" />
-                {settings.has_pin_configured ? "Ubah PIN" : "Atur PIN Baru"}
-              </Button>
-            </div>
+            {settings.security_pin_enabled && (
+              <div className="pt-3 border-t flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsChangingPin(true)
+                    setCurrentPin("")
+                    setNewPin("")
+                    setConfirmPin("")
+                    setDialogError(null)
+                    setPinDialogOpen(true)
+                  }}
+                  className="h-8 text-xs cursor-pointer"
+                >
+                  <KeyRoundIcon className="mr-1.5 size-3.5 text-primary" />
+                  Ubah PIN
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Card: Force Create Sales Order */}
@@ -340,9 +345,14 @@ export default function SystemSettingsPage() {
                 {/* Toggle Button */}
                 <button
                   type="button"
+                  disabled={!settings.security_pin_enabled}
                   onClick={handleToggleForceSalesOrder}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
-                    settings.force_sales_order_enabled ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-700"
+                  className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                    !settings.security_pin_enabled
+                      ? "bg-slate-200 dark:bg-slate-800 opacity-40 cursor-not-allowed"
+                      : settings.force_sales_order_enabled
+                      ? "bg-blue-600 cursor-pointer"
+                      : "bg-slate-300 dark:bg-slate-700 cursor-pointer"
                   }`}
                   role="switch"
                   aria-checked={settings.force_sales_order_enabled}
@@ -359,15 +369,12 @@ export default function SystemSettingsPage() {
               <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
                 Izinkan staf penjualan menerbitkan Sales Order walaupun stok gudang tidak mencukupi, dengan otorisasi 6 digit PIN saat pesanan dibuat.
               </p>
-            </div>
 
-            <div className="pt-3 border-t flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground">
-                Status:{" "}
-                <span className={settings.force_sales_order_enabled ? "text-blue-600 dark:text-blue-400 font-semibold" : "text-muted-foreground font-semibold"}>
-                  {settings.force_sales_order_enabled ? "Diizinkan (Otorisasi PIN)" : "Dibatasi (Strict Stock)"}
-                </span>
-              </span>
+              {!settings.security_pin_enabled && (
+                <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-2.5 font-medium">
+                  ⚠️ Keamanan PIN Otorisasi harus dinyalakan terlebih dahulu.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -379,10 +386,12 @@ export default function SystemSettingsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <KeyRoundIcon className="size-5 text-primary" />
-              {settings.has_pin_configured ? "Ubah PIN Keamanan" : "Buat PIN Keamanan 6 Digit"}
+              {isChangingPin ? "Ubah PIN Keamanan" : "Buat PIN Keamanan 6 Digit"}
             </DialogTitle>
             <DialogDescription>
-              PIN digunakan untuk otorisasi tindakan sensitif, seperti memaksa buat pesanan saat stok gudang kurang.
+              {isChangingPin
+                ? "Masukkan PIN saat ini dan buat 6 digit PIN baru."
+                : "Masukkan 6 digit angka untuk mengaktifkan Keamanan PIN."}
             </DialogDescription>
           </DialogHeader>
 
@@ -394,7 +403,7 @@ export default function SystemSettingsPage() {
               </div>
             )}
 
-            {settings.has_pin_configured && settings.security_pin_enabled && (
+            {isChangingPin && (
               <div className="space-y-1.5">
                 <Label htmlFor="currentPin">PIN Saat Ini</Label>
                 <Input
@@ -420,7 +429,7 @@ export default function SystemSettingsPage() {
                 value={newPin}
                 onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))}
                 className="tracking-widest text-center text-lg font-mono"
-                autoFocus={!settings.has_pin_configured}
+                autoFocus={!isChangingPin}
               />
             </div>
 
@@ -448,7 +457,7 @@ export default function SystemSettingsPage() {
               </Button>
               <Button type="submit" disabled={savingPin} className="gap-2">
                 {savingPin && <RefreshCwIcon className="size-4 animate-spin" />}
-                Simpan & Aktifkan PIN
+                {isChangingPin ? "Simpan Perubahan PIN" : "Simpan & Aktifkan PIN"}
               </Button>
             </DialogFooter>
           </form>
@@ -461,10 +470,14 @@ export default function SystemSettingsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ShieldAlertIcon className="size-5 text-amber-500" />
-              Otorisasi PIN Diperlukan
+              {authMode === "TURN_OFF_PIN"
+                ? "Verifikasi PIN untuk Mematikan Keamanan PIN"
+                : "Otorisasi PIN Diperlukan"}
             </DialogTitle>
             <DialogDescription>
-              Masukkan PIN 6 digit untuk mengesahkan pengaktifan fitur Force Create Sales Order.
+              {authMode === "TURN_OFF_PIN"
+                ? "Masukkan PIN 6 digit saat ini untuk menonaktifkan fitur Keamanan PIN."
+                : "Masukkan PIN 6 digit untuk mengesahkan pengaktifan fitur Force Create Sales Order."}
             </DialogDescription>
           </DialogHeader>
 
@@ -499,9 +512,13 @@ export default function SystemSettingsPage() {
               >
                 Batal
               </Button>
-              <Button type="submit" disabled={verifyingAuth} className="gap-2 bg-primary">
+              <Button
+                type="submit"
+                disabled={verifyingAuth || authPin.length !== 6}
+                className={`gap-2 ${authMode === "TURN_OFF_PIN" ? "bg-rose-600 hover:bg-rose-700 text-white" : "bg-primary"}`}
+              >
                 {verifyingAuth && <RefreshCwIcon className="size-4 animate-spin" />}
-                Konfirmasi Otorisasi
+                {authMode === "TURN_OFF_PIN" ? "Konfirmasi Nonaktifkan PIN" : "Konfirmasi Otorisasi"}
               </Button>
             </DialogFooter>
           </form>
