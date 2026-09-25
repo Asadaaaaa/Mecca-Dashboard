@@ -58,7 +58,7 @@ function timeAgo(dateStr: string): string {
 }
 
 export default function DashboardPage() {
-  const { theme, setTheme } = useTheme()
+  const { resolvedTheme, toggleTheme } = useTheme()
 
   const todayStr = new Date().toISOString().split("T")[0]
   const now = new Date()
@@ -85,10 +85,6 @@ export default function DashboardPage() {
   const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([])
   const [salesTrend, setSalesTrend] = useState<SalesTrendPoint[]>([])
   const [loading, setLoading] = useState(true)
-
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark")
-  }
 
   const fetchDashboardData = useCallback(async () => {
     setLoading(true)
@@ -159,7 +155,7 @@ export default function DashboardPage() {
             title="Ubah tema gelap / terang"
             className="cursor-pointer hover:bg-accent active:scale-95 transition-all"
           >
-            {theme === "dark" ? (
+            {resolvedTheme === "dark" ? (
               <SunIcon className="size-4 text-amber-400" />
             ) : (
               <MoonIcon className="size-4 text-slate-700" />

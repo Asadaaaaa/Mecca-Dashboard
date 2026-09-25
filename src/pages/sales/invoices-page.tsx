@@ -59,7 +59,7 @@ function formatRupiah(amount: number | string | undefined) {
 }
 
 export default function InvoicesPage() {
-  const { theme, setTheme } = useTheme()
+  const { resolvedTheme, toggleTheme } = useTheme()
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [metrics, setMetrics] = useState<InvoiceMetrics>({
     totalInvoices: 0,
@@ -242,10 +242,10 @@ export default function InvoicesPage() {
         <Button
           variant="outline"
           size="icon-sm"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          onClick={toggleTheme}
           className="cursor-pointer hover:bg-accent active:scale-95 transition-all"
         >
-          {theme === "dark" ? <SunIcon className="size-4 text-amber-400" /> : <MoonIcon className="size-4 text-slate-700" />}
+          {resolvedTheme === "dark" ? <SunIcon className="size-4 text-amber-400" /> : <MoonIcon className="size-4 text-slate-700" />}
         </Button>
       </header>
 

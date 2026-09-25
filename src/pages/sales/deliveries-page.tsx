@@ -54,7 +54,7 @@ import {
 } from "@/components/ui/dialog"
 
 export default function DeliveriesPage() {
-  const { theme, setTheme } = useTheme()
+  const { resolvedTheme, toggleTheme } = useTheme()
   const [deliveries, setDeliveries] = useState<Delivery[]>([])
   const [metrics, setMetrics] = useState<DeliveryMetrics>({
     totalDeliveries: 0,
@@ -219,10 +219,10 @@ export default function DeliveriesPage() {
         <Button
           variant="outline"
           size="icon-sm"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          onClick={toggleTheme}
           className="cursor-pointer hover:bg-accent active:scale-95 transition-all"
         >
-          {theme === "dark" ? <SunIcon className="size-4 text-amber-400" /> : <MoonIcon className="size-4 text-slate-700" />}
+          {resolvedTheme === "dark" ? <SunIcon className="size-4 text-amber-400" /> : <MoonIcon className="size-4 text-slate-700" />}
         </Button>
       </header>
 

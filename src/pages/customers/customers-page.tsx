@@ -63,7 +63,7 @@ function formatDate(dateStr?: string | null): string {
 }
 
 export default function CustomersPage() {
-  const { theme, setTheme } = useTheme()
+  const { resolvedTheme, toggleTheme } = useTheme()
 
   // State
   const [metrics, setMetrics] = useState<CustomerMetrics>({
@@ -268,11 +268,11 @@ export default function CustomersPage() {
             <Button
               variant="outline"
               size="icon-sm"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              onClick={toggleTheme}
               title="Ganti Tema"
               className="cursor-pointer hover:bg-accent hover:text-accent-foreground active:scale-95 transition-all"
             >
-              {theme === "dark" ? (
+              {resolvedTheme === "dark" ? (
                 <SunIcon className="size-4 text-amber-400" />
               ) : (
                 <MoonIcon className="size-4 text-slate-700" />

@@ -47,7 +47,7 @@ function formatRupiah(amount: number | string) {
 }
 
 export default function ProductsPage() {
-  const { theme, setTheme } = useTheme()
+  const { resolvedTheme, toggleTheme } = useTheme()
 
   const [metrics, setMetrics] = useState<ProductMetrics>({
     total_products: 0,
@@ -234,10 +234,10 @@ export default function ProductsPage() {
         <Button
           variant="outline"
           size="icon"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          onClick={toggleTheme}
           className="rounded-full"
         >
-          {theme === "dark" ? <SunIcon className="size-4 text-amber-400" /> : <MoonIcon className="size-4" />}
+          {resolvedTheme === "dark" ? <SunIcon className="size-4 text-amber-400" /> : <MoonIcon className="size-4" />}
         </Button>
       </header>
 

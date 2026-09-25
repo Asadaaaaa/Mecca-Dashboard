@@ -56,7 +56,7 @@ function formatRupiah(amount: number) {
 }
 
 export default function SalesOrdersPage() {
-  const { theme, setTheme } = useTheme()
+  const { resolvedTheme, toggleTheme } = useTheme()
   const [orders, setOrders] = useState<SalesOrder[]>([])
   const [metrics, setMetrics] = useState<SalesOrderMetrics>({
     totalOrders: 0,
@@ -215,10 +215,10 @@ export default function SalesOrdersPage() {
         <Button
           variant="outline"
           size="icon-sm"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          onClick={toggleTheme}
           className="cursor-pointer hover:bg-accent active:scale-95 transition-all"
         >
-          {theme === "dark" ? <SunIcon className="size-4 text-amber-400" /> : <MoonIcon className="size-4 text-slate-700" />}
+          {resolvedTheme === "dark" ? <SunIcon className="size-4 text-amber-400" /> : <MoonIcon className="size-4 text-slate-700" />}
         </Button>
       </header>
 

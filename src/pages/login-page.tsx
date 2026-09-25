@@ -5,11 +5,7 @@ import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
 
 export default function LoginPage() {
-  const { theme, setTheme } = useTheme()
-
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark")
-  }
+  const { resolvedTheme, toggleTheme } = useTheme()
 
   return (
     <div className="relative flex min-h-svh flex-col items-center justify-center bg-muted/40 p-6 md:p-10">
@@ -22,10 +18,10 @@ export default function LoginPage() {
           title="Toggle theme (or press 'd')"
           className="size-9 rounded-md"
         >
-          {theme === "dark" ? (
-            <SunIcon className="size-4" />
+          {resolvedTheme === "dark" ? (
+            <SunIcon className="size-4 text-amber-400" />
           ) : (
-            <MoonIcon className="size-4" />
+            <MoonIcon className="size-4 text-slate-700" />
           )}
           <span className="sr-only">Toggle theme</span>
         </Button>

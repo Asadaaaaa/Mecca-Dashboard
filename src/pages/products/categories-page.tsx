@@ -40,7 +40,7 @@ import {
 } from "lucide-react"
 
 export default function CategoriesPage() {
-  const { theme, setTheme } = useTheme()
+  const { resolvedTheme, toggleTheme } = useTheme()
 
   const [metrics, setMetrics] = useState<ProductCategoryMetrics>({
     total_categories: 0,
@@ -184,10 +184,10 @@ export default function CategoriesPage() {
         <Button
           variant="outline"
           size="icon"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          onClick={toggleTheme}
           className="rounded-full"
         >
-          {theme === "dark" ? <SunIcon className="size-4 text-amber-400" /> : <MoonIcon className="size-4" />}
+          {resolvedTheme === "dark" ? <SunIcon className="size-4 text-amber-400" /> : <MoonIcon className="size-4" />}
         </Button>
       </header>
 

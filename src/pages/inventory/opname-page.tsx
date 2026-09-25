@@ -56,7 +56,7 @@ function formatRupiah(amount: number) {
 }
 
 export default function StockOpnamePage() {
-  const { theme, setTheme } = useTheme()
+  const { resolvedTheme, toggleTheme } = useTheme()
   const [opnames, setOpnames] = useState<OpnameItem[]>([])
   const [metrics, setMetrics] = useState<OpnameMetrics>({
     total_opname: 0,
@@ -250,10 +250,10 @@ export default function StockOpnamePage() {
           <Button
             variant="outline"
             size="icon-sm"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onClick={toggleTheme}
             className="cursor-pointer hover:bg-accent active:scale-95 transition-all"
           >
-            {theme === "dark" ? <SunIcon className="size-4 text-amber-400" /> : <MoonIcon className="size-4 text-slate-700" />}
+            {resolvedTheme === "dark" ? <SunIcon className="size-4 text-amber-400" /> : <MoonIcon className="size-4 text-slate-700" />}
           </Button>
         </div>
       </header>

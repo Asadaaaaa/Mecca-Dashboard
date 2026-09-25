@@ -43,7 +43,7 @@ import {
 } from "lucide-react"
 
 export default function UsersPage() {
-  const { theme, setTheme } = useTheme()
+  const { resolvedTheme, toggleTheme } = useTheme()
 
   const [metrics, setMetrics] = useState<UserMetrics>({
     total_users: 0,
@@ -205,10 +205,10 @@ export default function UsersPage() {
         <Button
           variant="outline"
           size="icon"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="rounded-full"
+          onClick={toggleTheme}
+          className="rounded-full cursor-pointer hover:bg-accent active:scale-95 transition-all"
         >
-          {theme === "dark" ? <SunIcon className="size-4 text-amber-400" /> : <MoonIcon className="size-4" />}
+          {resolvedTheme === "dark" ? <SunIcon className="size-4 text-amber-400" /> : <MoonIcon className="size-4" />}
         </Button>
       </header>
 
