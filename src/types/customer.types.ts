@@ -7,7 +7,6 @@ export interface Customer {
   email?: string | null;
   address?: string | null;
   tax_number?: string | null;
-  payment_terms: number;
   affiliate?: string | null;
   date_of_birth?: string | null;
   first_visit?: string | null;
@@ -59,5 +58,4 @@ export interface CustomerFormData {
   phone?: string;
   email?: string;
   address?: string;
-  payment_terms?: number;
 }

@@ -277,7 +277,6 @@ export default function CustomersPage() {
       "Phone",
       "Email",
       "Address",
-      "Payment Terms",
       "Created At",
     ]
 
@@ -287,7 +286,6 @@ export default function CustomersPage() {
       c.phone || "-",
       c.email || "-",
       `"${(c.address || "-").replace(/"/g, '""')}"`,
-      c.payment_terms,
       c.created_at,
     ])
 

@@ -37,7 +37,6 @@ export function CustomerDialog({
     phone: "",
     email: "",
     address: "",
-    payment_terms: 30,
   })
 
   useEffect(() => {
@@ -48,7 +47,6 @@ export function CustomerDialog({
         phone: customer.phone || "",
         email: customer.email || "",
         address: customer.address || "",
-        payment_terms: customer.payment_terms ?? 30,
       })
     } else {
       setFormData({
@@ -57,7 +55,6 @@ export function CustomerDialog({
         phone: "",
         email: "",
         address: "",
-        payment_terms: 30,
       })
     }
     setError(null)
@@ -131,39 +128,17 @@ export function CustomerDialog({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="cust-pic" className="text-xs font-semibold">
-                  Nama PIC (Kontak)
-                </Label>
-                <Input
-                  id="cust-pic"
-                  value={formData.pic_name || ""}
-                  onChange={(e) => setFormData({ ...formData, pic_name: e.target.value })}
-                  placeholder="Nama Penanggung Jawab"
-                  className="h-9 text-sm"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="cust-terms" className="text-xs font-semibold">
-                  Payment Terms (Hari)
-                </Label>
-                <Input
-                  id="cust-terms"
-                  type="number"
-                  min="0"
-                  value={formData.payment_terms ?? 30}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      payment_terms: parseInt(e.target.value, 10) || 0,
-                    })
-                  }
-                  placeholder="30"
-                  className="h-9 text-sm"
-                />
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cust-pic" className="text-xs font-semibold">
+                Nama PIC (Kontak)
+              </Label>
+              <Input
+                id="cust-pic"
+                value={formData.pic_name || ""}
+                onChange={(e) => setFormData({ ...formData, pic_name: e.target.value })}
+                placeholder="Nama Penanggung Jawab"
+                className="h-9 text-sm"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">

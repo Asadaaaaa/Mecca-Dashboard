@@ -37,7 +37,6 @@ export interface Invoice {
     phone?: string
     email?: string
     address?: string
-    payment_terms?: number
   }
   issueDate: string
   dueDate: string

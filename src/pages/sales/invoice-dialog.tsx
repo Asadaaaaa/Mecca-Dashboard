@@ -94,11 +94,11 @@ export function InvoiceDialog({
   const loadDeliveryDetails = async (dId: number) => {
     try {
       const d = await deliveryService.getDeliveryById(dId)
-      setSelectedDelivery(d)
       if (d) {
+        setSelectedDelivery(d)
         setCustomerId(d.customer_id)
-        // If customer has terms, compute due date
-        const terms = (d as any).customer?.payment_terms || 30
+        // Default 30 days due date
+        const terms = 30
         const dDate = new Date(invoiceDate)
         dDate.setDate(dDate.getDate() + terms)
         setDueDate(dDate.toISOString().slice(0, 10))
