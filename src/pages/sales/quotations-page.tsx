@@ -180,8 +180,9 @@ export default function QuotationsPage() {
           await quotationService.convertToSalesOrder(item.id)
           setFeedback(`Quotation ${item.quotationNo} berhasil dikonversi ke Sales Order!`)
           fetchData()
-        } catch {
-          setFeedback("Gagal mengonversi quotation ke Sales Order.")
+        } catch (err: unknown) {
+          const e = err as { response?: { data?: { message?: string } }; message?: string }
+          setFeedback(e.response?.data?.message || e.message || "Gagal mengonversi quotation ke Sales Order.")
         }
       },
     })

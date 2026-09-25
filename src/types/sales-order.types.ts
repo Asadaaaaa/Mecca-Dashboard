@@ -94,3 +94,11 @@ export interface SalesOrderFormData {
     tax_amount?: number
   }[]
 }
+
+export interface AvailableStockInfo {
+  warehouse_id: number
+  product_id: number
+  physicalStock: number
+  reservedStock: number
+  availableStock: number
+}

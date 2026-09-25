@@ -145,8 +145,9 @@ export default function SalesOrdersPage() {
           await salesOrderService.confirmSalesOrder(item.id)
           setFeedback(`Sales Order ${item.orderNo} berhasil dikonfirmasi.`)
           fetchData()
-        } catch {
-          setFeedback("Gagal mengonfirmasi pesanan.")
+        } catch (err: unknown) {
+          const e = err as { response?: { data?: { message?: string } }; message?: string }
+          setFeedback(e.response?.data?.message || e.message || "Gagal mengonfirmasi pesanan.")
         }
       },
     })

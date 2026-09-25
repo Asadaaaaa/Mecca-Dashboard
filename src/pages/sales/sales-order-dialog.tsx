@@ -17,6 +17,7 @@ import { productService } from "@/services/product.service"
 import type { Customer } from "@/types/customer.types"
 import type { Warehouse } from "@/types/settings.types"
 import type { Product } from "@/types/product.types"
+import type { AvailableStockInfo } from "@/types/sales-order.types"
 import { Loader2Icon, ShoppingCartIcon, PlusIcon, Trash2Icon } from "lucide-react"
 
 interface SalesOrderDialogProps {
@@ -48,6 +49,27 @@ export function SalesOrderDialog({
   const [orderDate, setOrderDate] = useState(new Date().toISOString().slice(0, 10))
   const [notes, setNotes] = useState("")
   const [items, setItems] = useState<ItemRow[]>([])
+  const [stockMap, setStockMap] = useState<Record<number, AvailableStockInfo>>({})
+
+  const fetchStock = async (wId: number, pId: number) => {
+    if (!wId || !pId) return
+    try {
+      const stock = await salesOrderService.getAvailableStock(wId, pId)
+      setStockMap((prev) => ({ ...prev, [pId]: stock }))
+    } catch {
+      // ignore
+    }
+  }
+
+  useEffect(() => {
+    if (warehouseId) {
+      items.forEach((it) => {
+        if (it.product_id > 0) {
+          fetchStock(Number(warehouseId), it.product_id)
+        }
+      })
+    }
+  }, [warehouseId])
 
   useEffect(() => {
     if (open) {
@@ -57,6 +79,7 @@ export function SalesOrderDialog({
       setOrderDate(new Date().toISOString().slice(0, 10))
       setNotes("")
       setItems([{ product_id: 0, quantity: 1, unit_price: 0 }])
+      setStockMap({})
 
       // Load master data
       customerService.getCustomers({ limit: 100 }).then((res) => {
@@ -87,6 +110,10 @@ export function SalesOrderDialog({
       unit_price: price,
     }
     setItems(updated)
+
+    if (warehouseId && pId > 0) {
+      fetchStock(Number(warehouseId), pId)
+    }
   }
 
   const handleItemChange = (index: number, field: keyof ItemRow, val: number) => {
@@ -122,6 +149,17 @@ export function SalesOrderDialog({
     if (validItems.length === 0) {
       setError("Tambahkan minimal 1 produk dengan kuantitas yang valid.")
       return
+    }
+
+    // Strict validation: Check available stock before submitting
+    for (const it of validItems) {
+      const stock = stockMap[it.product_id]
+      if (stock && it.quantity > stock.availableStock) {
+        const prod = products.find((p) => p.id === it.product_id)
+        const pName = prod?.name || `Produk #${it.product_id}`
+        setError(`Stok tidak mencukupi untuk "${pName}". Stok tersedia: ${stock.availableStock} (Fisik: ${stock.physicalStock}, Terpesan di SO aktif: ${stock.reservedStock}), diminta: ${it.quantity}. Harap sesuaikan pesanan.`)
+        return
+      }
     }
 
     setLoading(true)
@@ -247,61 +285,88 @@ export function SalesOrderDialog({
             </div>
 
             <div className="space-y-2">
-              {items.map((row, idx) => (
-                <div key={idx} className="flex items-center gap-2 bg-muted/30 p-2 rounded-md border border-border/50">
-                  <div className="flex-1">
-                    <select
-                      value={row.product_id}
-                      onChange={(e) => handleProductChange(idx, Number(e.target.value))}
-                      className="w-full h-8 rounded border border-input bg-background px-2 text-xs text-foreground outline-none"
-                    >
-                      <option value={0}>-- Pilih Produk --</option>
-                      {products.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.code} - {p.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+              {items.map((row, idx) => {
+                const stock = row.product_id > 0 ? stockMap[row.product_id] : null
+                const isExceeded = Boolean(stock && row.quantity > stock.availableStock)
 
-                  <div className="w-20">
-                    <Input
-                      type="number"
-                      min={1}
-                      value={row.quantity}
-                      onChange={(e) => handleItemChange(idx, "quantity", parseFloat(e.target.value) || 0)}
-                      placeholder="Qty"
-                      className="text-xs h-8 text-right"
-                    />
-                  </div>
+                return (
+                  <div key={idx} className="space-y-1 bg-muted/30 p-2.5 rounded-md border border-border/50">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <select
+                          value={row.product_id}
+                          onChange={(e) => handleProductChange(idx, Number(e.target.value))}
+                          className="w-full h-8 rounded border border-input bg-background px-2 text-xs text-foreground outline-none"
+                        >
+                          <option value={0}>-- Pilih Produk --</option>
+                          {products.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.code} - {p.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                  <div className="w-32">
-                    <Input
-                      type="number"
-                      min={0}
-                      value={row.unit_price}
-                      onChange={(e) => handleItemChange(idx, "unit_price", parseFloat(e.target.value) || 0)}
-                      placeholder="Harga Satuan"
-                      className="text-xs h-8 text-right font-mono"
-                    />
-                  </div>
+                      <div className="w-24">
+                        <Input
+                          type="number"
+                          min={1}
+                          value={row.quantity}
+                          onChange={(e) => handleItemChange(idx, "quantity", parseFloat(e.target.value) || 0)}
+                          placeholder="Qty"
+                          className={`text-xs h-8 text-right ${isExceeded ? "border-red-500 text-red-500 font-bold focus-visible:ring-red-500" : ""}`}
+                        />
+                      </div>
 
-                  <div className="w-32 text-right font-mono text-xs font-medium text-foreground">
-                    IDR {(row.quantity * row.unit_price || 0).toLocaleString("id-ID")}
-                  </div>
+                      <div className="w-32">
+                        <Input
+                          type="number"
+                          min={0}
+                          value={row.unit_price}
+                          onChange={(e) => handleItemChange(idx, "unit_price", parseFloat(e.target.value) || 0)}
+                          placeholder="Harga Satuan"
+                          className="text-xs h-8 text-right font-mono"
+                        />
+                      </div>
 
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    disabled={items.length <= 1}
-                    onClick={() => removeItemRow(idx)}
-                    className="text-red-500 hover:text-red-700 h-8 w-8"
-                  >
-                    <Trash2Icon className="size-3.5" />
-                  </Button>
-                </div>
-              ))}
+                      <div className="w-32 text-right font-mono text-xs font-medium text-foreground">
+                        IDR {(row.quantity * row.unit_price || 0).toLocaleString("id-ID")}
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        disabled={items.length <= 1}
+                        onClick={() => removeItemRow(idx)}
+                        className="text-red-500 hover:text-red-700 h-8 w-8"
+                      >
+                        <Trash2Icon className="size-3.5" />
+                      </Button>
+                    </div>
+
+                    {row.product_id > 0 && (
+                      <div className="flex items-center justify-between text-[11px] px-1 pt-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground">Stok Gudang:</span>
+                          {stock ? (
+                            <span className={stock.availableStock > 0 ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-red-500 font-medium"}>
+                              Tersedia: <strong className="font-semibold">{stock.availableStock}</strong> (Fisik: {stock.physicalStock}, Terpesan di SO aktif: {stock.reservedStock})
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground italic">Memuat info stok...</span>
+                          )}
+                        </div>
+                        {isExceeded && (
+                          <span className="text-red-500 font-medium flex items-center gap-1">
+                            ⚠️ Melebihi stok tersedia ({stock?.availableStock})
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
 
             <div className="flex justify-end pt-2 text-xs font-semibold text-foreground">

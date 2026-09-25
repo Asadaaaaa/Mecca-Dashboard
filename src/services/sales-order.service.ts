@@ -5,9 +5,17 @@ import type {
   SalesOrderQueryParams,
   SalesOrderListResponse,
   SalesOrderFormData,
+  AvailableStockInfo,
 } from "@/types/sales-order.types"
 
 export const salesOrderService = {
+  async getAvailableStock(warehouse_id: number, product_id: number, exclude_so_id?: number): Promise<AvailableStockInfo> {
+    const params: Record<string, any> = { warehouse_id, product_id }
+    if (exclude_so_id) params.exclude_so_id = exclude_so_id
+    const res = await apiClient.get("/sales-orders/available-stock", { params })
+    return res.data?.data || { warehouse_id, product_id, physicalStock: 0, reservedStock: 0, availableStock: 0 }
+  },
+
   async getSalesOrders(params: SalesOrderQueryParams = {}): Promise<SalesOrderListResponse> {
     const res = await apiClient.get("/sales-orders", { params })
     return res.data?.data || { items: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 1 } }
