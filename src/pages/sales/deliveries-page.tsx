@@ -43,6 +43,7 @@ import {
   PackageOpenIcon,
   AlertTriangleIcon,
   FileTextIcon,
+  CopyIcon,
 } from "lucide-react"
 import {
   Dialog,
@@ -79,6 +80,8 @@ export default function DeliveriesPage() {
   const [selectedDeliveryForInvoice, setSelectedDeliveryForInvoice] = useState<number | null>(null)
   const [previewItem, setPreviewItem] = useState<Delivery | null>(null)
   const [printItem, setPrintItem] = useState<Delivery | null>(null)
+  const [printFormat, setPrintFormat] = useState<"pdf" | "dotmatrix">("pdf")
+  const [copiedRaw, setCopiedRaw] = useState(false)
 
   const [confirmModal, setConfirmModal] = useState<{
     open: boolean
@@ -191,6 +194,390 @@ export default function DeliveriesPage() {
         }
       },
     })
+  }
+
+  // Generate ASCII Plain Text for Dot Matrix / Continuous Form (Epson LX-310 Compatible)
+  const generateDotMatrixRawText = (item: Delivery) => {
+    const line = "================================================================================"
+    const dashed = "--------------------------------------------------------------------------------"
+    const pad = (str: string, len: number) => (str || "").padEnd(len).slice(0, len)
+    const padNum = (num: number, len: number) => String(num).padStart(len)
+
+    const warehouseName =
+      typeof item.warehouse === "object"
+        ? (item.warehouse as { name?: string })?.name || "Gudang Utama"
+        : item.warehouse || "Gudang Utama"
+
+    let text = ""
+    text += line + "\n"
+    text += `${pad("PT MECCA DISTRIBUSI SOLUSINDO", 48)} SURAT JALAN (DO)\n`
+    text += `${pad("Pergudangan Cakung Blok B-12, Jakarta Timur", 48)} No. DO  : ${item.deliveryNo}\n`
+    text += `${pad("Telp: (021) 8901-2345", 48)} Tanggal : ${item.date}\n`
+    text += dashed + "\n"
+    text += `${pad("KEPADA YTH : " + item.customerName, 48)} Ref. SO : ${item.refOrder}\n`
+    text += `${pad("Gudang Asal: " + warehouseName, 48)} Armada  : ${item.courierFleet || "-"}\n`
+    text += `${pad("", 48)} Resi    : ${item.trackingNumber || "-"}\n`
+    text += dashed + "\n"
+    text += `NO  KODE BARANG       NAMA BARANG                                QTY   SATUAN\n`
+    text += dashed + "\n"
+    if (item.items && item.items.length > 0) {
+      item.items.forEach((it, idx) => {
+        const no = padNum(idx + 1, 2)
+        const code = pad(it.productCode || it.product?.code || "-", 16)
+        const name = pad(it.productName || it.product?.name || `Produk #${it.product_id}`, 40)
+        const qty = padNum(it.quantity, 6)
+        text += `${no}  ${code}  ${name}   ${qty}   UNIT\n`
+      })
+    } else {
+      text += `    (Tidak ada rincian item barang)\n`
+    }
+    text += dashed + "\n"
+    text += `TOTAL MUATAN : ${item.totalItems} UNIT\n`
+    if (item.notes) {
+      text += `Catatan      : ${item.notes}\n`
+    }
+    text += dashed + "\n"
+    text += `     Tanda Terima,              Pengemudi/Kurir,             Petugas Gudang,\n\n\n\n`
+    text += `   (                )         (                )           (                )\n`
+    text += line + "\n"
+    text += `* Lembar 1: Putih (Pelanggan)  | Lembar 2: Merah (Gudang)  | Lembar 3: Kuning (Finance) *\n`
+    return text
+  }
+
+  const handleCopyRawAscii = () => {
+    if (!printItem) return
+    const raw = generateDotMatrixRawText(printItem)
+    navigator.clipboard.writeText(raw)
+    setCopiedRaw(true)
+    setTimeout(() => setCopiedRaw(false), 2000)
+  }
+
+  const handlePrintDocument = () => {
+    if (!printItem) return
+
+    const iframe = document.createElement("iframe")
+    iframe.style.position = "fixed"
+    iframe.style.right = "0"
+    iframe.style.bottom = "0"
+    iframe.style.width = "0"
+    iframe.style.height = "0"
+    iframe.style.border = "0"
+    document.body.appendChild(iframe)
+
+    const doc = iframe.contentWindow?.document
+    if (!doc) return
+
+    const isDotMatrix = printFormat === "dotmatrix"
+    const warehouseName =
+      typeof printItem.warehouse === "object"
+        ? (printItem.warehouse as { name?: string })?.name || "Gudang Utama"
+        : printItem.warehouse || "Gudang Utama"
+
+    let contentHtml = ""
+
+    if (isDotMatrix) {
+      const rawText = generateDotMatrixRawText(printItem)
+      contentHtml = `
+        <div class="dot-matrix-container">
+          <pre class="dot-matrix-text">${rawText}</pre>
+        </div>
+      `
+    } else {
+      const itemsRows = (printItem.items || [])
+        .map(
+          (it, idx) => `
+          <tr>
+            <td style="text-align: center;">${idx + 1}</td>
+            <td style="font-family: monospace;">${it.productCode || it.product?.code || "-"}</td>
+            <td>${it.productName || it.product?.name || `Produk #${it.product_id}`}</td>
+            <td style="text-align: right; font-weight: bold; font-family: monospace;">${it.quantity}</td>
+            <td style="text-align: center;">UNIT</td>
+          </tr>
+        `
+        )
+        .join("")
+
+      contentHtml = `
+        <div class="pdf-container">
+          <div class="header">
+            <div>
+              <div class="company-name">MECCA DISTRIBUTION</div>
+              <div class="company-sub">PT MECCA DISTRIBUSI SOLUSINDO</div>
+              <div class="company-address">Kawasan Pergudangan Cakung Blok B-12, Jakarta Timur 13910</div>
+              <div class="company-address">Telp: (021) 8901-2345 | logistic@mecca.com</div>
+            </div>
+            <div class="doc-badge">
+              <div class="doc-title">SURAT JALAN</div>
+              <div class="doc-no">${printItem.deliveryNo}</div>
+              <div class="doc-date">Tanggal: ${printItem.date}</div>
+            </div>
+          </div>
+
+          <hr class="divider" />
+
+          <div class="info-grid">
+            <div class="info-card">
+              <div class="info-label">TUJUAN PENGIRIMAN (KEPADA YTH):</div>
+              <div class="info-title">${printItem.customerName}</div>
+              <div class="info-detail">Ref. Sales Order: <strong>${printItem.refOrder}</strong></div>
+              <div class="info-detail">Alamat: Kirim sesuai alamat kontrak pelanggan</div>
+            </div>
+            <div class="info-card">
+              <div class="info-label">DETAIL LOGISTIK & EKSPEDISI:</div>
+              <div class="info-detail">Gudang Asal: <strong>${warehouseName}</strong></div>
+              <div class="info-detail">Armada / Kurir: <strong>${printItem.courierFleet || "-"}</strong></div>
+              <div class="info-detail">No. Resi Pengiriman: <strong>${printItem.trackingNumber || "-"}</strong></div>
+            </div>
+          </div>
+
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width: 40px; text-align: center;">NO</th>
+                <th style="width: 140px;">KODE BARANG</th>
+                <th>DESKRIPSI / NAMA PRODUK</th>
+                <th style="width: 90px; text-align: right;">JUMLAH</th>
+                <th style="width: 80px; text-align: center;">SATUAN</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsRows}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3" style="text-align: right; font-weight: bold; background: #f8fafc;">TOTAL MUATAN PENGIRIMAN:</td>
+                <td style="text-align: right; font-weight: bold; font-family: monospace; background: #f8fafc;">${printItem.totalItems}</td>
+                <td style="text-align: center; background: #f8fafc; font-weight: bold;">UNIT</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          ${printItem.notes ? `<div class="notes"><strong>Catatan Khusus:</strong> ${printItem.notes}</div>` : ""}
+
+          <div class="signatures">
+            <div class="sig-col">
+              <div class="sig-title">Diserahkan Oleh,</div>
+              <div class="sig-role">Petugas Gudang</div>
+              <div class="sig-line">( ..................................... )</div>
+            </div>
+            <div class="sig-col">
+              <div class="sig-title">Dibawa / Diantar Oleh,</div>
+              <div class="sig-role">Pengemudi / Kurir</div>
+              <div class="sig-line">( ..................................... )</div>
+            </div>
+            <div class="sig-col">
+              <div class="sig-title">Diterima Dengan Baik,</div>
+              <div class="sig-role">Penerima / Cap Toko</div>
+              <div class="sig-line">( ..................................... )</div>
+            </div>
+          </div>
+
+          <div class="footer-note">
+            <span>* Lembar 1 (Putih): Pelanggan</span>
+            <span>* Lembar 2 (Merah): Gudang / Pengirim</span>
+            <span>* Lembar 3 (Kuning): Keuangan / Penagihan</span>
+          </div>
+        </div>
+      `
+    }
+
+    doc.open()
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Surat Jalan - ${printItem.deliveryNo}</title>
+          <style>
+            @page {
+              size: ${isDotMatrix ? "210mm 140mm" : "A4 portrait"};
+              margin: ${isDotMatrix ? "4mm" : "12mm 15mm"};
+            }
+            body {
+              margin: 0;
+              padding: 0;
+              color: #000;
+              background: #fff;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            * { box-sizing: border-box; }
+
+            .dot-matrix-container {
+              padding: 4px;
+            }
+            .dot-matrix-text {
+              margin: 0;
+              font-family: 'Courier New', Courier, monospace !important;
+              font-size: 11px;
+              line-height: 1.25;
+              white-space: pre-wrap;
+              color: #000;
+            }
+
+            .pdf-container {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+              color: #0f172a;
+              font-size: 12px;
+              line-height: 1.4;
+            }
+            .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 8px;
+            }
+            .company-name {
+              font-size: 18px;
+              font-weight: 800;
+              letter-spacing: -0.02em;
+              color: #0f172a;
+            }
+            .company-sub {
+              font-size: 11px;
+              font-weight: 600;
+              color: #475569;
+              margin-top: 1px;
+            }
+            .company-address {
+              font-size: 10px;
+              color: #64748b;
+              margin-top: 1px;
+            }
+            .doc-badge {
+              text-align: right;
+            }
+            .doc-title {
+              font-size: 16px;
+              font-weight: 800;
+              letter-spacing: 0.05em;
+              color: #0f172a;
+            }
+            .doc-no {
+              font-family: monospace;
+              font-size: 13px;
+              font-weight: 700;
+              color: #1e293b;
+              margin-top: 2px;
+            }
+            .doc-date {
+              font-size: 11px;
+              color: #64748b;
+              margin-top: 1px;
+            }
+            .divider {
+              border: none;
+              border-top: 2px solid #0f172a;
+              margin: 8px 0 12px 0;
+            }
+            .info-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 12px;
+              margin-bottom: 12px;
+            }
+            .info-card {
+              border: 1px solid #cbd5e1;
+              border-radius: 6px;
+              padding: 8px 10px;
+              background-color: #f8fafc;
+            }
+            .info-label {
+              font-size: 9px;
+              font-weight: 700;
+              color: #64748b;
+              letter-spacing: 0.05em;
+              text-transform: uppercase;
+              margin-bottom: 4px;
+            }
+            .info-title {
+              font-size: 12px;
+              font-weight: 700;
+              color: #0f172a;
+              margin-bottom: 2px;
+            }
+            .info-detail {
+              font-size: 11px;
+              color: #334155;
+              margin-top: 2px;
+            }
+            .table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 12px;
+            }
+            .table th, .table td {
+              border: 1px solid #cbd5e1;
+              padding: 6px 8px;
+              font-size: 11px;
+            }
+            .table th {
+              background-color: #f1f5f9 !important;
+              color: #1e293b;
+              font-weight: 700;
+              font-size: 10px;
+              letter-spacing: 0.04em;
+              text-align: left;
+            }
+            .notes {
+              font-size: 11px;
+              background-color: #f8fafc;
+              border: 1px dashed #cbd5e1;
+              padding: 6px 10px;
+              border-radius: 4px;
+              margin-bottom: 16px;
+            }
+            .signatures {
+              display: grid;
+              grid-template-columns: 1fr 1fr 1fr;
+              gap: 16px;
+              text-align: center;
+              margin-top: 20px;
+              margin-bottom: 16px;
+            }
+            .sig-col {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+            }
+            .sig-title {
+              font-size: 11px;
+              color: #475569;
+              font-weight: 600;
+            }
+            .sig-role {
+              font-size: 10px;
+              color: #64748b;
+              margin-bottom: 45px;
+            }
+            .sig-line {
+              font-size: 11px;
+              font-weight: 600;
+              color: #1e293b;
+            }
+            .footer-note {
+              border-top: 1px solid #e2e8f0;
+              padding-top: 6px;
+              font-size: 9px;
+              color: #94a3b8;
+              display: flex;
+              justify-content: space-between;
+            }
+          </style>
+        </head>
+        <body>
+          ${contentHtml}
+        </body>
+      </html>
+    `)
+    doc.close()
+
+    setTimeout(() => {
+      iframe.contentWindow?.focus()
+      iframe.contentWindow?.print()
+      setTimeout(() => {
+        document.body.removeChild(iframe)
+      }, 1000)
+    }, 250)
   }
 
   return (
@@ -671,92 +1058,190 @@ export default function DeliveriesPage() {
         </Dialog>
       )}
 
-      {/* Print Surat Jalan Modal */}
+      {/* Print Surat Jalan Modal with 2 Options: PDF & Dot Matrix */}
       {printItem && (
         <Dialog open={Boolean(printItem)} onOpenChange={(open) => !open && setPrintItem(null)}>
-          <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
-            <div className="p-4 border border-dashed rounded-lg bg-white text-slate-900 font-sans space-y-4">
-              <div className="flex justify-between items-start border-b pb-3">
+          <DialogContent className="sm:max-w-[720px] max-h-[92vh] overflow-y-auto">
+            <DialogHeader className="border-b pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-bold tracking-tight text-slate-900">MECCA DISTRIBUTION</h2>
-                  <p className="text-[11px] text-slate-500">PT Mecca Distribusi Solusindo</p>
-                  <p className="text-[11px] text-slate-500">Kawasan Pergudangan Cakung, Jakarta Timur</p>
+                  <DialogTitle className="text-base font-semibold flex items-center gap-2">
+                    <TruckIcon className="size-4 text-primary" />
+                    Cetak Surat Jalan (Delivery Order)
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                    No. DO: <span className="font-mono font-semibold text-foreground">{printItem.deliveryNo}</span> | Customer: {printItem.customerName}
+                  </DialogDescription>
                 </div>
-                <div className="text-right">
-                  <div className="text-sm font-bold uppercase tracking-wider text-slate-900">SURAT JALAN</div>
-                  <div className="font-mono text-xs font-semibold text-slate-700">{printItem.deliveryNo}</div>
-                  <div className="text-[11px] text-slate-500">Tanggal: {printItem.date}</div>
+
+                {/* 2 Print Format Tabs: PDF vs Dot Matrix */}
+                <div className="inline-flex rounded-lg border bg-muted p-1 shrink-0 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setPrintFormat("pdf")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                      printFormat === "pdf"
+                        ? "bg-background text-foreground shadow-xs"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <FileTextIcon className="size-3.5 text-blue-600 dark:text-blue-400" />
+                    PDF (Standar A4)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPrintFormat("dotmatrix")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                      printFormat === "dotmatrix"
+                        ? "bg-background text-foreground shadow-xs"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <PrinterIcon className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                    Dot Matrix (Continuous Form)
+                  </button>
                 </div>
               </div>
+            </DialogHeader>
 
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div className="bg-slate-50 p-2.5 rounded border border-slate-200">
-                  <div className="font-semibold text-slate-700 uppercase tracking-wider text-[10px]">Tujuan Pengiriman:</div>
-                  <div className="font-bold text-slate-900 mt-1">{printItem.customerName}</div>
-                  <div className="text-slate-600 text-[11px] mt-0.5">Ref. Order: {printItem.refOrder}</div>
-                </div>
-                <div className="bg-slate-50 p-2.5 rounded border border-slate-200">
-                  <div className="font-semibold text-slate-700 uppercase tracking-wider text-[10px]">Detail Ekspedisi:</div>
-                  <div className="font-bold text-slate-900 mt-1">Armada: {printItem.courierFleet || "-"}</div>
-                  <div className="text-slate-600 text-[11px] mt-0.5">
-                    Gudang: {typeof printItem.warehouse === "object" ? printItem.warehouse?.name : printItem.warehouse || "Gudang Utama"}
+            {/* Content Area Based on Selected Option */}
+            {printFormat === "pdf" ? (
+              /* PDF A4 Formal Layout Preview */
+              <div className="p-5 border border-dashed rounded-lg bg-white text-slate-900 font-sans space-y-4 shadow-xs">
+                <div className="flex justify-between items-start border-b pb-3">
+                  <div>
+                    <h2 className="text-lg font-bold tracking-tight text-slate-900">MECCA DISTRIBUTION</h2>
+                    <p className="text-[11px] font-medium text-slate-600">PT Mecca Distribusi Solusindo</p>
+                    <p className="text-[10px] text-slate-500">Kawasan Pergudangan Cakung Blok B-12, Jakarta Timur</p>
+                    <p className="text-[10px] text-slate-500">Telp: (021) 8901-2345 | logistic@mecca.com</p>
                   </div>
-                  <div className="text-slate-600 text-[11px]">Resi: {printItem.trackingNumber || "-"}</div>
+                  <div className="text-right">
+                    <div className="text-sm font-bold uppercase tracking-wider text-slate-900">SURAT JALAN</div>
+                    <div className="font-mono text-xs font-bold text-slate-800 mt-0.5">{printItem.deliveryNo}</div>
+                    <div className="text-[11px] text-slate-500 mt-0.5">Tanggal: {printItem.date}</div>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <table className="w-full text-xs border text-left">
-                  <thead className="bg-slate-100 text-slate-700 uppercase text-[10px]">
-                    <tr>
-                      <th className="p-2 border">No.</th>
-                      <th className="p-2 border">Kode Barang</th>
-                      <th className="p-2 border">Deskripsi Barang</th>
-                      <th className="p-2 border text-right">Jumlah</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {printItem.items && printItem.items.map((it, idx) => (
-                      <tr key={idx} className="border-b">
-                        <td className="p-2 border text-center">{idx + 1}</td>
-                        <td className="p-2 border font-mono">{it.productCode || it.product?.code || "-"}</td>
-                        <td className="p-2 border">{it.productName || it.product?.name || `Produk #${it.product_id}`}</td>
-                        <td className="p-2 border text-right font-mono font-bold">{it.quantity} Unit</td>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="bg-slate-50 p-2.5 rounded border border-slate-200">
+                    <div className="font-semibold text-slate-700 uppercase tracking-wider text-[10px]">Tujuan Pengiriman:</div>
+                    <div className="font-bold text-slate-900 mt-1">{printItem.customerName}</div>
+                    <div className="text-slate-600 text-[11px] mt-0.5">
+                      Ref. Order: <span className="font-mono font-medium">{printItem.refOrder}</span>
+                    </div>
+                  </div>
+                  <div className="bg-slate-50 p-2.5 rounded border border-slate-200">
+                    <div className="font-semibold text-slate-700 uppercase tracking-wider text-[10px]">Detail Ekspedisi:</div>
+                    <div className="font-bold text-slate-900 mt-1">Armada: {printItem.courierFleet || "-"}</div>
+                    <div className="text-slate-600 text-[11px] mt-0.5">
+                      Gudang: {typeof printItem.warehouse === "object" ? (printItem.warehouse as { name?: string })?.name : printItem.warehouse || "Gudang Utama"}
+                    </div>
+                    <div className="text-slate-600 text-[11px]">Resi: {printItem.trackingNumber || "-"}</div>
+                  </div>
+                </div>
+
+                <div>
+                  <table className="w-full text-xs border text-left">
+                    <thead className="bg-slate-100 text-slate-700 uppercase text-[10px]">
+                      <tr>
+                        <th className="p-2 border text-center w-10">No.</th>
+                        <th className="p-2 border">Kode Barang</th>
+                        <th className="p-2 border">Deskripsi Barang</th>
+                        <th className="p-2 border text-right">Jumlah</th>
+                        <th className="p-2 border text-center">Satuan</th>
                       </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-slate-50 font-bold">
-                      <td colSpan={3} className="p-2 border text-right">TOTAL MUATAN:</td>
-                      <td className="p-2 border text-right font-mono">{printItem.totalItems} Unit</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {printItem.items && printItem.items.length > 0 ? (
+                        printItem.items.map((it, idx) => (
+                          <tr key={idx} className="border-b">
+                            <td className="p-2 border text-center">{idx + 1}</td>
+                            <td className="p-2 border font-mono font-medium">{it.productCode || it.product?.code || "-"}</td>
+                            <td className="p-2 border">{it.productName || it.product?.name || `Produk #${it.product_id}`}</td>
+                            <td className="p-2 border text-right font-mono font-bold">{it.quantity}</td>
+                            <td className="p-2 border text-center text-slate-600">UNIT</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={5} className="p-3 text-center text-slate-500">Tidak ada rincian item</td>
+                        </tr>
+                      )}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-slate-50 font-bold">
+                        <td colSpan={3} className="p-2 border text-right">TOTAL MUATAN:</td>
+                        <td className="p-2 border text-right font-mono">{printItem.totalItems}</td>
+                        <td className="p-2 border text-center">UNIT</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
 
-              <div className="grid grid-cols-3 gap-2 pt-6 text-center text-xs">
-                <div>
-                  <div className="text-slate-500 mb-10">Penerima,</div>
-                  <div className="border-t border-slate-400 mx-4 pt-1 text-slate-700">( ........................ )</div>
+                {printItem.notes && (
+                  <div className="text-xs bg-slate-50 p-2 rounded border border-slate-200">
+                    <span className="font-semibold text-slate-700">Catatan: </span>
+                    <span className="text-slate-600">{printItem.notes}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-3 gap-2 pt-4 text-center text-xs">
+                  <div>
+                    <div className="text-slate-500 mb-9 text-[11px]">Diserahkan Oleh,</div>
+                    <div className="border-t border-slate-400 mx-3 pt-1 text-slate-700 font-medium">( Petugas Gudang )</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500 mb-9 text-[11px]">Pengemudi / Kurir,</div>
+                    <div className="border-t border-slate-400 mx-3 pt-1 text-slate-700 font-medium">( ........................ )</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500 mb-9 text-[11px]">Diterima Dengan Baik,</div>
+                    <div className="border-t border-slate-400 mx-3 pt-1 text-slate-700 font-medium">( Penerima / Cap )</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-slate-500 mb-10">Sopir / Kurir,</div>
-                  <div className="border-t border-slate-400 mx-4 pt-1 text-slate-700">( ........................ )</div>
-                </div>
-                <div>
-                  <div className="text-slate-500 mb-10">Hormat Kami,</div>
-                  <div className="border-t border-slate-400 mx-4 pt-1 text-slate-700">( Gudang Mecca )</div>
+
+                <div className="border-t pt-2 flex justify-between text-[10px] text-slate-400">
+                  <span>* Lembar 1: Putih (Pelanggan)</span>
+                  <span>* Lembar 2: Merah (Gudang)</span>
+                  <span>* Lembar 3: Kuning (Finance)</span>
                 </div>
               </div>
-            </div>
+            ) : (
+              /* Dot Matrix (Continuous Form) Layout Preview */
+              <div className="space-y-3">
+                <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-lg text-xs text-emerald-800 dark:text-emerald-300">
+                  <div className="flex items-center gap-2">
+                    <PrinterIcon className="size-4 shrink-0 text-emerald-600" />
+                    <span>Format Kertas Rangkap / Continuous Form (Epson LX-310 / Dot Matrix 80-Kolom)</span>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCopyRawAscii}
+                    className="h-7 text-xs gap-1.5 cursor-pointer bg-background"
+                  >
+                    {copiedRaw ? <CheckIcon className="size-3 text-emerald-600" /> : <CopyIcon className="size-3" />}
+                    {copiedRaw ? "Tersalin!" : "Salin Raw ASCII"}
+                  </Button>
+                </div>
 
-            <DialogFooter>
+                {/* Simulated Continuous Form Monospace Paper Preview */}
+                <div className="relative rounded-lg border-2 border-slate-300 bg-[#f7faf4] text-slate-800 p-4 font-mono text-xs overflow-x-auto shadow-inner dark:bg-slate-950 dark:text-emerald-400 dark:border-slate-800">
+                  <pre className="font-mono text-xs leading-relaxed select-all whitespace-pre m-0">
+                    {generateDotMatrixRawText(printItem)}
+                  </pre>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="gap-2 sm:gap-0">
               <Button size="sm" variant="outline" onClick={() => setPrintItem(null)}>
                 Tutup
               </Button>
-              <Button size="sm" onClick={() => window.print()}>
-                <PrinterIcon className="size-3.5 mr-1.5" />
-                Cetak Dokumen
+              <Button size="sm" onClick={handlePrintDocument} className="gap-1.5">
+                <PrinterIcon className="size-3.5" />
+                {printFormat === "pdf" ? "Cetak / Simpan PDF" : "Cetak ke Dot Matrix"}
               </Button>
             </DialogFooter>
           </DialogContent>
