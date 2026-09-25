@@ -65,7 +65,6 @@ export default function DeliveriesPage() {
   })
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
-  const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [statusFilter, setStatusFilter] = useState("Semua")
   const [sortField, setSortField] = useState("delivery_date")
   const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("DESC")
@@ -185,7 +184,6 @@ export default function DeliveriesPage() {
       onConfirm: async () => {
         try {
           await deliveryService.deleteDelivery(id)
-          setSelectedIds((prev) => prev.filter((i) => i !== id))
           setFeedback(`Surat Jalan ${no} berhasil dihapus.`)
           fetchData()
         } catch {
@@ -194,29 +192,6 @@ export default function DeliveriesPage() {
       },
     })
   }
-
-  const handleBatchDelete = () => {
-    if (selectedIds.length === 0) return
-    setConfirmModal({
-      open: true,
-      title: "Hapus Surat Jalan Terpilih",
-      description: `Hapus ${selectedIds.length} surat jalan yang dipilih?`,
-      variant: "destructive",
-      confirmText: "Hapus Semua",
-      onConfirm: async () => {
-        try {
-          await deliveryService.batchDeleteDeliveries(selectedIds)
-          setSelectedIds([])
-          setFeedback(`${selectedIds.length} surat jalan berhasil dihapus.`)
-          fetchData()
-        } catch {
-          setErrorFeedback("Gagal menghapus beberapa surat jalan.")
-        }
-      },
-    })
-  }
-
-  const isAllSelected = deliveries.length > 0 && deliveries.every((d) => selectedIds.includes(d.id))
 
   return (
     <SidebarInset>
@@ -350,18 +325,6 @@ export default function DeliveriesPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              {selectedIds.length > 0 && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleBatchDelete}
-                  className="cursor-pointer active:scale-95 transition-all text-xs font-medium"
-                >
-                  <Trash2Icon className="size-3.5 mr-1" />
-                  Hapus ({selectedIds.length})
-                </Button>
-              )}
-
               <Button
                 variant="outline"
                 size="sm"
@@ -391,20 +354,6 @@ export default function DeliveriesPage() {
             <table className="w-full text-xs text-left">
               <thead className="bg-muted/50 text-muted-foreground uppercase text-[10px] tracking-wider border-b border-border/60">
                 <tr>
-                  <th className="p-3 w-10 text-center">
-                    <input
-                      type="checkbox"
-                      checked={isAllSelected}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedIds(deliveries.map((d) => d.id))
-                        } else {
-                          setSelectedIds([])
-                        }
-                      }}
-                      className="rounded border-border/80 text-primary focus:ring-primary size-3.5 cursor-pointer"
-                    />
-                  </th>
                   <th className="p-3 cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort("delivery_number")}>
                     <div className="flex items-center gap-1">No. Surat Jalan <ArrowUpDownIcon className="size-3" /></div>
                   </th>
@@ -423,7 +372,7 @@ export default function DeliveriesPage() {
               <tbody className="divide-y divide-border/40">
                 {loading ? (
                   <tr>
-                    <td colSpan={10} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={9} className="p-8 text-center text-muted-foreground">
                       <div className="flex items-center justify-center gap-2">
                         <Loader2Icon className="size-4 animate-spin text-primary" />
                         <span>Memuat data pengiriman...</span>
@@ -432,32 +381,17 @@ export default function DeliveriesPage() {
                   </tr>
                 ) : deliveries.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={9} className="p-8 text-center text-muted-foreground">
                       Tidak ada data surat jalan yang ditemukan.
                     </td>
                   </tr>
                 ) : (
                   deliveries.map((item) => {
-                    const isSelected = selectedIds.includes(item.id)
                     return (
                       <tr
                         key={item.id}
-                        className={`hover:bg-muted/40 transition-colors ${isSelected ? "bg-primary/5" : ""}`}
+                        className="hover:bg-muted/40 transition-colors"
                       >
-                        <td className="p-3 text-center">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedIds((prev) => [...prev, item.id])
-                              } else {
-                                setSelectedIds((prev) => prev.filter((i) => i !== item.id))
-                              }
-                            }}
-                            className="rounded border-border/80 text-primary focus:ring-primary size-3.5 cursor-pointer"
-                          />
-                        </td>
                         <td className="p-3 font-mono font-semibold text-foreground">
                           <div>{item.deliveryNo}</div>
                           {item.trackingNumber && item.trackingNumber !== "-" && (

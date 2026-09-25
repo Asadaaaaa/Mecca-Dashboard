@@ -64,7 +64,6 @@ export default function ProductsPage() {
 
   // Filters & Pagination
   const [search, setSearch] = useState("")
-  const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [unitFilter, setUnitFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -188,29 +187,6 @@ export default function ProductsPage() {
     })
   }
 
-  const handleBatchDelete = () => {
-    if (selectedIds.length === 0) return
-    setConfirmModal({
-      open: true,
-      title: `Hapus ${selectedIds.length} Produk Terpilih`,
-      description: `Apakah Anda yakin ingin menghapus ${selectedIds.length} data produk yang dipilih?`,
-      variant: "destructive",
-      confirmText: "Hapus Semua",
-      onConfirm: async () => {
-        try {
-          await productService.batchDeleteProducts(selectedIds)
-          setSelectedIds([])
-          showToast(`${selectedIds.length} produk berhasil dihapus`)
-          fetchMetrics()
-          fetchProducts()
-        } catch (err: unknown) {
-          const e = err as { response?: { data?: { message?: string } }; message?: string }
-          showToast(e.response?.data?.message || "Gagal menghapus produk")
-        }
-      },
-    })
-  }
-
   const handleExportCSV = () => {
     if (products.length === 0) return
     const headers = ["ID", "Kode", "Nama Produk", "Kategori", "Satuan", "Harga Jual", "Status"]
@@ -234,7 +210,6 @@ export default function ProductsPage() {
     showToast("Data produk berhasil diexport ke CSV")
   }
 
-  const isAllSelected = products.length > 0 && products.every((p) => selectedIds.includes(p.id))
   const totalPages = Math.ceil(totalCount / limit) || 1
 
   return (
@@ -433,17 +408,6 @@ export default function ProductsPage() {
               </div>
             </div>
 
-            {selectedIds.length > 0 && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleBatchDelete}
-                className="text-xs font-medium"
-              >
-                <Trash2Icon className="size-3.5 mr-1" />
-                Hapus Terpilih ({selectedIds.length})
-              </Button>
-            )}
           </div>
 
           {/* Table */}
@@ -451,20 +415,6 @@ export default function ProductsPage() {
             <table className="w-full text-left text-sm">
               <thead className="border-b bg-muted/40 text-xs font-medium text-muted-foreground uppercase">
                 <tr>
-                  <th className="px-4 py-3 w-10 text-center">
-                    <input
-                      type="checkbox"
-                      checked={isAllSelected}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedIds(products.map((p) => p.id))
-                        } else {
-                          setSelectedIds([])
-                        }
-                      }}
-                      className="rounded border-border/80 text-primary size-3.5 cursor-pointer"
-                    />
-                  </th>
                   <th
                     className="px-6 py-3 cursor-pointer hover:bg-muted/80"
                     onClick={() => handleSort("code")}
@@ -509,7 +459,7 @@ export default function ProductsPage() {
               <tbody className="divide-y">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-muted-foreground">
+                    <td colSpan={7} className="py-12 text-center text-muted-foreground">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <Loader2Icon className="size-6 animate-spin text-primary" />
                         <span>Memuat katalog produk...</span>
@@ -518,7 +468,7 @@ export default function ProductsPage() {
                   </tr>
                 ) : products.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-muted-foreground">
+                    <td colSpan={7} className="py-12 text-center text-muted-foreground">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <PackageIcon className="size-8 text-muted-foreground/50" />
                         <span>Tidak ada produk ditemukan</span>
@@ -527,27 +477,11 @@ export default function ProductsPage() {
                   </tr>
                 ) : (
                   products.map((prd) => {
-                    const isSelected = selectedIds.includes(prd.id)
-
                     return (
                       <tr
                         key={prd.id}
-                        className={`hover:bg-muted/30 transition-colors ${isSelected ? "bg-primary/5" : ""}`}
+                        className="hover:bg-muted/30 transition-colors"
                       >
-                        <td className="px-4 py-4 text-center">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedIds((prev) => [...prev, prd.id])
-                              } else {
-                                setSelectedIds((prev) => prev.filter((id) => id !== prd.id))
-                              }
-                            }}
-                            className="rounded border-border/80 text-primary size-3.5 cursor-pointer"
-                          />
-                        </td>
                         <td className="px-6 py-4 font-mono font-medium text-primary text-xs">
                           {prd.code}
                         </td>

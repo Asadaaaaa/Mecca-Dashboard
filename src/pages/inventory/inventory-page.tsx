@@ -58,7 +58,6 @@ export default function InventoryPage() {
   const [warehousesList, setWarehousesList] = useState<Warehouse[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
-  const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [warehouseFilter, setWarehouseFilter] = useState("Semua")
   const [statusFilter, setStatusFilter] = useState("Semua")
   const [sortField, setSortField] = useState<keyof StockItem>("name")
@@ -146,34 +145,11 @@ export default function InventoryPage() {
       onConfirm: async () => {
         try {
           await inventoryService.deleteStock(id)
-          setSelectedIds((prev) => prev.filter((i) => i !== id))
           setFeedback(`Data stok "${name}" berhasil dihapus.`)
           setTimeout(() => setFeedback(null), 3000)
           loadData()
         } catch {
           setFeedback("Gagal menghapus data stok.")
-        }
-      },
-    })
-  }
-
-  const handleBatchDelete = () => {
-    if (selectedIds.length === 0) return
-    setConfirmModal({
-      open: true,
-      title: "Hapus Item Stok Terpilih",
-      description: `Hapus ${selectedIds.length} data item stok yang dipilih?`,
-      variant: "destructive",
-      onConfirm: async () => {
-        try {
-          await inventoryService.batchDeleteStocks(selectedIds)
-          const count = selectedIds.length
-          setSelectedIds([])
-          setFeedback(`${count} item stok berhasil dihapus.`)
-          setTimeout(() => setFeedback(null), 3000)
-          loadData()
-        } catch {
-          setFeedback("Gagal menghapus item stok terpilih.")
         }
       },
     })
@@ -212,8 +188,6 @@ export default function InventoryPage() {
     setFeedback("Laporan inventaris stok (.csv) berhasil diunduh.")
     setTimeout(() => setFeedback(null), 3000)
   }
-
-  const isAllSelected = paginatedStocks.length > 0 && paginatedStocks.every((s) => selectedIds.includes(s.id))
 
   const warehouses = ["Semua", ...Array.from(new Set(warehousesList.map((w) => w.name)))]
 
@@ -369,18 +343,6 @@ export default function InventoryPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              {selectedIds.length > 0 && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleBatchDelete}
-                  className="cursor-pointer active:scale-95 transition-all text-xs font-medium"
-                >
-                  <Trash2Icon className="size-3.5 mr-1" />
-                  Hapus ({selectedIds.length})
-                </Button>
-              )}
-
               <Button
                 variant="outline"
                 size="sm"
@@ -407,20 +369,6 @@ export default function InventoryPage() {
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-border/60 bg-muted/30 text-muted-foreground">
-                  <th className="p-3 w-10 text-center">
-                    <input
-                      type="checkbox"
-                      checked={isAllSelected}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedIds(paginatedStocks.map((s) => s.id))
-                        } else {
-                          setSelectedIds([])
-                        }
-                      }}
-                      className="rounded border-border/70 accent-primary cursor-pointer"
-                    />
-                  </th>
                   <th className="p-3 font-semibold cursor-pointer hover:text-foreground" onClick={() => handleSort("sku")}>
                     <div className="flex items-center gap-1">
                       SKU
@@ -455,37 +403,22 @@ export default function InventoryPage() {
               <tbody className="divide-y divide-border/40">
                 {loading ? (
                   <tr>
-                    <td colSpan={10} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={9} className="p-8 text-center text-muted-foreground">
                       <Loader2Icon className="size-6 animate-spin mx-auto mb-2 text-primary" />
                       Memuat data saldo stok...
                     </td>
                   </tr>
                 ) : paginatedStocks.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={9} className="p-8 text-center text-muted-foreground">
                       Tidak ada data stok yang sesuai dengan filter atau pencarian.
                     </td>
                   </tr>
                 ) : (
                   paginatedStocks.map((stock) => {
-                    const isSelected = selectedIds.includes(stock.id)
                     const itemValuation = stock.actualStock * stock.unitPrice
                     return (
-                      <tr key={stock.id} className={`hover:bg-muted/20 transition-colors ${isSelected ? "bg-primary/5" : ""}`}>
-                        <td className="p-3 text-center">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedIds((prev) => [...prev, stock.id])
-                              } else {
-                                setSelectedIds((prev) => prev.filter((i) => i !== stock.id))
-                              }
-                            }}
-                            className="rounded border-border/70 accent-primary cursor-pointer"
-                          />
-                        </td>
+                      <tr key={stock.id} className="hover:bg-muted/20 transition-colors">
                         <td className="p-3 font-mono font-medium text-foreground">{stock.sku}</td>
                         <td className="p-3">
                           <div className="font-semibold text-foreground">{stock.name}</div>

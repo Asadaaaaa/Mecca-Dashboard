@@ -66,7 +66,6 @@ export default function QuotationsPage() {
   })
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
-  const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [statusFilter, setStatusFilter] = useState("Semua")
   const [sortField, setSortField] = useState("quotation_date")
   const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("DESC")
@@ -198,7 +197,6 @@ export default function QuotationsPage() {
       onConfirm: async () => {
         try {
           await quotationService.deleteQuotation(id)
-          setSelectedIds((prev) => prev.filter((i) => i !== id))
           setFeedback(`Quotation ${no} berhasil dihapus.`)
           fetchData()
         } catch {
@@ -207,29 +205,6 @@ export default function QuotationsPage() {
       },
     })
   }
-
-  const handleBatchDelete = () => {
-    if (selectedIds.length === 0) return
-    setConfirmModal({
-      open: true,
-      title: "Hapus Quotation Terpilih",
-      description: `Hapus ${selectedIds.length} penawaran harga yang dipilih?`,
-      variant: "destructive",
-      confirmText: "Hapus Semua",
-      onConfirm: async () => {
-        try {
-          await quotationService.batchDeleteQuotations(selectedIds)
-          setSelectedIds([])
-          setFeedback(`${selectedIds.length} quotation berhasil dihapus.`)
-          fetchData()
-        } catch {
-          setFeedback("Gagal menghapus beberapa quotation.")
-        }
-      },
-    })
-  }
-
-  const isAllSelected = quotations.length > 0 && quotations.every((q) => selectedIds.includes(q.id))
 
   return (
     <SidebarInset>
@@ -357,18 +332,6 @@ export default function QuotationsPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              {selectedIds.length > 0 && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleBatchDelete}
-                  className="cursor-pointer active:scale-95 transition-all text-xs font-medium"
-                >
-                  <Trash2Icon className="size-3.5 mr-1" />
-                  Hapus ({selectedIds.length})
-                </Button>
-              )}
-
               <Button
                 variant="outline"
                 size="sm"
@@ -398,20 +361,6 @@ export default function QuotationsPage() {
             <table className="w-full text-xs text-left">
               <thead className="bg-muted/50 text-muted-foreground uppercase text-[10px] tracking-wider border-b border-border/60">
                 <tr>
-                  <th className="p-3 w-10 text-center">
-                    <input
-                      type="checkbox"
-                      checked={isAllSelected}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedIds(quotations.map((q) => q.id))
-                        } else {
-                          setSelectedIds([])
-                        }
-                      }}
-                      className="rounded border-border/80 text-primary focus:ring-primary size-3.5 cursor-pointer"
-                    />
-                  </th>
                   <th className="p-3 cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort("quotation_number")}>
                     <div className="flex items-center gap-1">No. Penawaran <ArrowUpDownIcon className="size-3" /></div>
                   </th>
@@ -430,7 +379,7 @@ export default function QuotationsPage() {
               <tbody className="divide-y divide-border/40">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
                       <div className="flex items-center justify-center gap-2">
                         <Loader2Icon className="size-4 animate-spin text-primary" />
                         <span>Memuat data penawaran...</span>
@@ -439,32 +388,17 @@ export default function QuotationsPage() {
                   </tr>
                 ) : quotations.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
                       Tidak ada penawaran penjualan yang ditemukan.
                     </td>
                   </tr>
                 ) : (
                   quotations.map((item) => {
-                    const isSelected = selectedIds.includes(item.id)
                     return (
                       <tr
                         key={item.id}
-                        className={`hover:bg-muted/40 transition-colors ${isSelected ? "bg-primary/5" : ""}`}
+                        className="hover:bg-muted/40 transition-colors"
                       >
-                        <td className="p-3 text-center">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedIds((prev) => [...prev, item.id])
-                              } else {
-                                setSelectedIds((prev) => prev.filter((i) => i !== item.id))
-                              }
-                            }}
-                            className="rounded border-border/80 text-primary focus:ring-primary size-3.5 cursor-pointer"
-                          />
-                        </td>
                         <td className="p-3 font-mono font-semibold text-foreground">{item.quotationNo}</td>
                         <td className="p-3 text-muted-foreground">{item.date}</td>
                         <td className="p-3 font-medium text-foreground">

@@ -98,7 +98,6 @@ export default function PaymentsPage() {
   })
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
-  const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [statusFilter, setStatusFilter] = useState("Semua")
   const [methodFilter, setMethodFilter] = useState("Semua")
   const [sortField, setSortField] = useState("payment_date")
@@ -176,32 +175,10 @@ export default function PaymentsPage() {
       onConfirm: async () => {
         try {
           await paymentService.deletePayment(id)
-          setSelectedIds((prev) => prev.filter((i) => i !== id))
           setFeedback(`Pembayaran ${no} berhasil dihapus dan saldo faktur telah diperbarui.`)
           fetchData()
         } catch {
           setErrorFeedback("Gagal menghapus pembayaran.")
-        }
-      },
-    })
-  }
-
-  const handleBatchDelete = () => {
-    if (selectedIds.length === 0) return
-    setConfirmModal({
-      open: true,
-      title: "Hapus Pembayaran Terpilih",
-      description: `Hapus ${selectedIds.length} transaksi pembayaran yang dipilih? Saldo faktur terkait akan dikembalikan.`,
-      variant: "destructive",
-      confirmText: "Hapus Semua",
-      onConfirm: async () => {
-        try {
-          await paymentService.batchDeletePayments(selectedIds)
-          setSelectedIds([])
-          setFeedback(`${selectedIds.length} pembayaran berhasil dihapus.`)
-          fetchData()
-        } catch {
-          setErrorFeedback("Gagal menghapus beberapa pembayaran.")
         }
       },
     })
@@ -253,8 +230,6 @@ export default function PaymentsPage() {
     setFeedback("File laporan pembayaran berhasil diunduh (.csv)")
     setTimeout(() => setFeedback(null), 3000)
   }
-
-  const isAllSelected = payments.length > 0 && payments.every((p) => selectedIds.includes(p.id))
 
   return (
     <SidebarInset>
@@ -411,18 +386,6 @@ export default function PaymentsPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              {selectedIds.length > 0 && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleBatchDelete}
-                  className="cursor-pointer active:scale-95 transition-all text-xs font-medium"
-                >
-                  <Trash2Icon className="size-3.5 mr-1" />
-                  Hapus ({selectedIds.length})
-                </Button>
-              )}
-
               <Button
                 variant="outline"
                 size="sm"
@@ -449,20 +412,6 @@ export default function PaymentsPage() {
             <table className="w-full text-xs text-left">
               <thead className="bg-muted/50 text-muted-foreground uppercase text-[10px] tracking-wider border-b border-border/60">
                 <tr>
-                  <th className="p-3 w-10 text-center">
-                    <input
-                      type="checkbox"
-                      checked={isAllSelected}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedIds(payments.map((p) => p.id))
-                        } else {
-                          setSelectedIds([])
-                        }
-                      }}
-                      className="rounded border-border/80 text-primary focus:ring-primary size-3.5 cursor-pointer"
-                    />
-                  </th>
                   <th className="p-3 cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort("payment_number")}>
                     <div className="flex items-center gap-1">No. Bukti Bayar <ArrowUpDownIcon className="size-3" /></div>
                   </th>
@@ -482,7 +431,7 @@ export default function PaymentsPage() {
               <tbody className="divide-y divide-border/40">
                 {loading ? (
                   <tr>
-                    <td colSpan={9} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={8} className="p-8 text-center text-muted-foreground">
                       <div className="flex items-center justify-center gap-2">
                         <Loader2Icon className="size-4 animate-spin text-primary" />
                         <span>Memuat data pembayaran...</span>
@@ -491,32 +440,17 @@ export default function PaymentsPage() {
                   </tr>
                 ) : payments.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={8} className="p-8 text-center text-muted-foreground">
                       Tidak ada catatan transaksi pembayaran yang ditemukan.
                     </td>
                   </tr>
                 ) : (
                   payments.map((item) => {
-                    const isSelected = selectedIds.includes(item.id)
                     return (
                       <tr
                         key={item.id}
-                        className={`hover:bg-muted/40 transition-colors ${isSelected ? "bg-primary/5" : ""}`}
+                        className="hover:bg-muted/40 transition-colors"
                       >
-                        <td className="p-3 text-center">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedIds((prev) => [...prev, item.id])
-                              } else {
-                                setSelectedIds((prev) => prev.filter((i) => i !== item.id))
-                              }
-                            }}
-                            className="rounded border-border/80 text-primary focus:ring-primary size-3.5 cursor-pointer"
-                          />
-                        </td>
                         <td className="p-3 font-mono font-semibold text-foreground">
                           <div>{item.paymentNo}</div>
                           {item.referenceNumber && item.referenceNumber !== "-" && (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -90,9 +90,6 @@ export default function CustomersPage() {
   const [hasDebtFilter, setHasDebtFilter] = useState(false)
   const [timePeriod, setTimePeriod] = useState("All Time")
 
-  // Selection
-  const [selectedIds, setSelectedIds] = useState<number[]>([])
-
   // Modal Dialogs
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
@@ -164,63 +161,6 @@ export default function CustomersPage() {
     setPage(1)
   }
 
-  // Selection Handlers
-  const isAllSelected = useMemo(() => {
-    if (customers.length === 0) return false
-    return customers.every((c) => selectedIds.includes(c.id))
-  }, [customers, selectedIds])
-
-  const handleSelectAll = () => {
-    if (isAllSelected) {
-      setSelectedIds([])
-    } else {
-      const currentIds = customers.map((c) => c.id)
-      setSelectedIds(Array.from(new Set([...selectedIds, ...currentIds])))
-    }
-  }
-
-  const handleToggleSelect = (id: number) => {
-    if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter((item) => item !== id))
-    } else {
-      setSelectedIds([...selectedIds, id])
-    }
-  }
-
-  // Batch Delete with Confirm Modal
-  const handleBatchDelete = () => {
-    if (selectedIds.length === 0) return
-
-    setConfirmModal({
-      open: true,
-      title: "Hapus Customer Terpilih",
-      description: `Apakah Anda yakin ingin menghapus ${selectedIds.length} customer terpilih? Tindakan ini tidak dapat dibatalkan.`,
-      variant: "destructive",
-      confirmText: "Ya, Hapus Semua",
-      onConfirm: async () => {
-        setConfirmModal((prev) => ({ ...prev, loading: true }))
-        try {
-          await customerService.batchDeleteCustomers(selectedIds)
-          setSelectedIds([])
-          setFeedback(`${selectedIds.length} customer berhasil dihapus.`)
-          setTimeout(() => setFeedback(null), 4000)
-          fetchCustomers()
-          fetchMetrics()
-        } catch {
-          setConfirmModal({
-            open: true,
-            title: "Gagal Menghapus",
-            description: "Terjadi kesalahan saat menghapus data customer terpilih.",
-            type: "alert",
-            variant: "destructive",
-          })
-        } finally {
-          setConfirmModal((prev) => ({ ...prev, loading: false }))
-        }
-      },
-    })
-  }
-
   // Single Delete with Confirm Modal
   const handleDeleteSingle = (id: number, name: string) => {
     setConfirmModal({
@@ -233,7 +173,6 @@ export default function CustomersPage() {
         setConfirmModal((prev) => ({ ...prev, loading: true }))
         try {
           await customerService.deleteCustomer(id)
-          setSelectedIds((prev) => prev.filter((item) => item !== id))
           setFeedback(`Customer "${name}" berhasil dihapus.`)
           setTimeout(() => setFeedback(null), 4000)
           fetchCustomers()
@@ -255,9 +194,7 @@ export default function CustomersPage() {
 
   // Export CSV with Alert Modal when empty
   const handleExportCSV = () => {
-    const listToExport = selectedIds.length > 0
-      ? customers.filter((c) => selectedIds.includes(c.id))
-      : customers
+    const listToExport = customers
 
     if (listToExport.length === 0) {
       setConfirmModal({
@@ -520,19 +457,6 @@ export default function CustomersPage() {
                 >
                   <DownloadIcon className="size-4" />
                 </Button>
-
-                {/* Delete Batch Button */}
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  disabled={selectedIds.length === 0}
-                  onClick={handleBatchDelete}
-                  className="h-9 gap-1.5 text-xs cursor-pointer bg-rose-500 hover:bg-rose-600 active:scale-95 text-white shadow-xs hover:shadow transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                  title="Hapus Customer Terpilih"
-                >
-                  <Trash2Icon className="size-3.5" />
-                  <span>Delete ({selectedIds.length})</span>
-                </Button>
               </div>
             </div>
 
@@ -541,15 +465,6 @@ export default function CustomersPage() {
               <table className="w-full text-left text-xs">
                 <thead className="border-b border-border/60 bg-muted/30 text-muted-foreground font-medium">
                   <tr>
-                    <th className="w-10 px-4 py-3 text-center">
-                      <input
-                        type="checkbox"
-                        checked={isAllSelected}
-                        onChange={handleSelectAll}
-                        className="size-4 rounded-sm border-gray-300 text-primary focus:ring-primary accent-emerald-600 cursor-pointer"
-                      />
-                    </th>
-
                     <th
                       className="cursor-pointer px-4 py-3 font-medium hover:text-foreground transition-colors"
                       onClick={() => handleSort("name")}
@@ -637,7 +552,7 @@ export default function CustomersPage() {
                 <tbody className="divide-y divide-border/40">
                   {loading ? (
                     <tr>
-                      <td colSpan={10} className="h-40 text-center text-muted-foreground">
+                      <td colSpan={9} className="h-40 text-center text-muted-foreground">
                         <div className="flex items-center justify-center gap-2">
                           <Loader2Icon className="size-5 animate-spin text-primary" />
                           <span>Memuat data pelanggan...</span>
@@ -646,32 +561,20 @@ export default function CustomersPage() {
                     </tr>
                   ) : customers.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="h-32 text-center text-muted-foreground">
+                      <td colSpan={9} className="h-32 text-center text-muted-foreground">
                         Tidak ada data customer yang cocok dengan kriteria.
                       </td>
                     </tr>
                   ) : (
                     customers.map((c) => {
-                      const isSelected = selectedIds.includes(c.id)
                       const unpaidNum = parseFloat(String(c.total_unpaid || 0))
                       const hasUnpaid = unpaidNum > 0
 
                       return (
                         <tr
                           key={c.id}
-                          className={`transition-colors hover:bg-muted/40 ${
-                            isSelected ? "bg-muted/60" : ""
-                          }`}
+                          className="transition-colors hover:bg-muted/40"
                         >
-                          <td className="px-4 py-3 text-center">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => handleToggleSelect(c.id)}
-                              className="size-4 rounded-sm border-gray-300 text-primary focus:ring-primary accent-emerald-600 cursor-pointer"
-                            />
-                          </td>
-
                           <td className="px-4 py-3 font-semibold text-foreground whitespace-nowrap">
                             {c.name}
                           </td>
