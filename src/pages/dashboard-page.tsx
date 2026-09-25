@@ -33,7 +33,6 @@ import {
   ReceiptIcon,
   CreditCardIcon,
   PackageIcon,
-  SparklesIcon,
 } from "lucide-react"
 
 function formatRupiah(amount: number | string | undefined): string {
@@ -168,9 +167,8 @@ export default function DashboardPage() {
         {/* Top Greeting & Date Range Picker */}
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-              <span>Dashboard Analitik & Penjualan</span>
-              <SparklesIcon className="size-5 text-amber-500 animate-pulse hidden sm:inline" />
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Overview
             </h1>
             <p className="text-xs text-muted-foreground">
               Pemantauan performa rantai distribusi, pendapatan, piutang komersial, dan arus kas riil.
