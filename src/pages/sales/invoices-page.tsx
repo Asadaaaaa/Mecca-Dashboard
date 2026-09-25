@@ -273,41 +273,65 @@ export default function InvoicesPage() {
         )}
 
         {/* 4 KPI Cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Tagihan Terbit</span>
-              <ReceiptIcon className="size-4 text-muted-foreground/70" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Total Tagihan Terbit</p>
+                <h3 className="text-2xl font-bold mt-1">{formatRupiah(totalBilled)}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{metrics.totalInvoices} faktur komersial</p>
+              </div>
+              <div className="rounded-full bg-blue-500/10 p-3 text-blue-600 dark:text-blue-400">
+                <ReceiptIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-2xl font-bold tracking-tight text-foreground">{formatRupiah(totalBilled)}</div>
-            <div className="mt-2 text-xs text-muted-foreground">{metrics.totalInvoices} faktur komersial tercatat</div>
           </Card>
 
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Piutang Belum Terbayar</span>
-              <ClockIcon className="size-4 text-amber-500" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Piutang Belum Bayar</p>
+                <h3 className="text-2xl font-bold mt-1 text-amber-600 dark:text-amber-500">
+                  {formatRupiah(metrics.totalReceivables)}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {metrics.unpaidCount + metrics.partiallyPaidCount} faktur belum lunas
+                </p>
+              </div>
+              <div className="rounded-full bg-amber-500/10 p-3 text-amber-600 dark:text-amber-400">
+                <ClockIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-500">{formatRupiah(metrics.totalReceivables)}</div>
-            <div className="mt-2 text-xs text-muted-foreground">{metrics.unpaidCount + metrics.partiallyPaidCount} faktur belum lunas</div>
           </Card>
 
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Kas Piutang Tertagih</span>
-              <CheckCircle2Icon className="size-4 text-emerald-500" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Kas Piutang Tertagih</p>
+                <h3 className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-500">
+                  {formatRupiah(metrics.paidTotal)}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{metrics.paidCount} faktur telah lunas</p>
+              </div>
+              <div className="rounded-full bg-emerald-500/10 p-3 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2Icon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-500">{formatRupiah(metrics.paidTotal)}</div>
-            <div className="mt-2 text-xs text-muted-foreground">{metrics.paidCount} faktur telah lunas</div>
           </Card>
 
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Faktur Overdue</span>
-              <AlertOctagonIcon className="size-4 text-red-500" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Faktur Overdue</p>
+                <h3 className="text-2xl font-bold mt-1 text-rose-600 dark:text-rose-500">
+                  {metrics.overdueCount}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Lewat tanggal jatuh tempo</p>
+              </div>
+              <div className="rounded-full bg-rose-500/10 p-3 text-rose-600 dark:text-rose-400">
+                <AlertOctagonIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-3xl font-bold tracking-tight text-red-600 dark:text-red-500">{metrics.overdueCount}</div>
-            <div className="mt-2 text-xs text-muted-foreground">Melewati tanggal jatuh tempo</div>
           </Card>
         </div>
 

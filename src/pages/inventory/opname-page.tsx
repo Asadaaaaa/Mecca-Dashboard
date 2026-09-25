@@ -275,41 +275,63 @@ export default function StockOpnamePage() {
         )}
 
         {/* 4 KPI Cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Sesi Opname</span>
-              <FileSpreadsheetIcon className="size-4 text-muted-foreground/70" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Total Sesi Opname</p>
+                <h3 className="text-2xl font-bold mt-1">{metrics.total_opname}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Sesi audit tercatat</p>
+              </div>
+              <div className="rounded-full bg-blue-500/10 p-3 text-blue-600 dark:text-blue-400">
+                <FileSpreadsheetIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-3xl font-bold tracking-tight text-foreground">{metrics.total_opname}</div>
-            <div className="mt-2 text-xs text-muted-foreground">Sesi audit tercatat</div>
           </Card>
 
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Selesai Disetujui</span>
-              <ClipboardCheckIcon className="size-4 text-emerald-500" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Selesai Disetujui</p>
+                <h3 className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
+                  {metrics.approved_count}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Saldo riil disinkronkan</p>
+              </div>
+              <div className="rounded-full bg-emerald-500/10 p-3 text-emerald-600 dark:text-emerald-400">
+                <ClipboardCheckIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">{metrics.approved_count}</div>
-            <div className="mt-2 text-xs text-muted-foreground">Saldo riil disinkronkan</div>
           </Card>
 
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Menunggu Review</span>
-              <ClockIcon className="size-4 text-amber-500" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Menunggu Review</p>
+                <h3 className="text-2xl font-bold mt-1 text-amber-600 dark:text-amber-400">
+                  {metrics.pending_count}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Perlu verifikasi supervisor</p>
+              </div>
+              <div className="rounded-full bg-amber-500/10 p-3 text-amber-600 dark:text-amber-400">
+                <ClockIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-3xl font-bold tracking-tight text-amber-600 dark:text-amber-400">{metrics.pending_count}</div>
-            <div className="mt-2 text-xs text-muted-foreground">Perlu verifikasi supervisor</div>
           </Card>
 
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Akurasi Stok</span>
-              <PercentIcon className="size-4 text-primary" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Akurasi Stok</p>
+                <h3 className="text-2xl font-bold mt-1 text-purple-600 dark:text-purple-400">
+                  {metrics.accuracy_rate}%
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Kesesuaian fisik & sistem</p>
+              </div>
+              <div className="rounded-full bg-purple-500/10 p-3 text-purple-600 dark:text-purple-400">
+                <PercentIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-3xl font-bold tracking-tight text-foreground">{metrics.accuracy_rate}%</div>
-            <div className="mt-2 text-xs text-muted-foreground">Tingkat kecocokan fisik & sistem</div>
           </Card>
         </div>
 

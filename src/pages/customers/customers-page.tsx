@@ -326,89 +326,64 @@ export default function CustomersPage() {
           )}
 
           {/* 4 KPI Metric Cards */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {/* Card 1: Total Customers */}
-            <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs transition-all hover:shadow-md hover:border-border">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card className="p-4 border">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground">Total Customers</span>
-                <UsersIcon className="size-4 text-muted-foreground/70" />
-              </div>
-              <div className="mt-3">
-                <div className="text-3xl font-bold tracking-tight text-foreground">
-                  {metrics.totalCustomers.toLocaleString()}
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Total Pelanggan</p>
+                  <h3 className="text-2xl font-bold mt-1">{metrics.totalCustomers.toLocaleString()}</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">+{metrics.newThisMonth} baru bulan ini</p>
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Registered customers
+                <div className="rounded-full bg-blue-500/10 p-3 text-blue-600 dark:text-blue-400">
+                  <UsersIcon className="size-6" />
                 </div>
-              </div>
-              <div className="mt-4">
-                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
-                  +{metrics.newThisMonth} new this month
-                </span>
               </div>
             </Card>
 
-            {/* Card 2: Returning Customers */}
-            <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs transition-all hover:shadow-md hover:border-border">
+            <Card className="p-4 border">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground">Returning Customers</span>
-                <UserCheckIcon className="size-4 text-muted-foreground/70" />
-              </div>
-              <div className="mt-3">
-                <div className="text-3xl font-bold tracking-tight text-foreground">
-                  {metrics.returningCustomers.toLocaleString()}
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Pelanggan Loyal</p>
+                  <h3 className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
+                    {metrics.returningCustomers.toLocaleString()}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">{metrics.retentionRate}% tingkat retensi</p>
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Have visited multiple times
+                <div className="rounded-full bg-emerald-500/10 p-3 text-emerald-600 dark:text-emerald-400">
+                  <UserCheckIcon className="size-6" />
                 </div>
-              </div>
-              <div className="mt-4">
-                <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
-                  {metrics.retentionRate}% retention rate
-                </span>
               </div>
             </Card>
 
-            {/* Card 3: Biggest Spender */}
-            <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs transition-all hover:shadow-md hover:border-border">
+            <Card className="p-4 border">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground">Biggest Spender</span>
-                <CrownIcon className="size-4 text-amber-500 fill-amber-500/20" />
-              </div>
-              <div className="mt-4 flex items-center gap-3">
-                <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted font-bold text-sm text-foreground/80">
-                  {metrics.biggestSpender.initials}
-                </div>
                 <div className="overflow-hidden">
-                  <div className="font-semibold text-foreground text-sm truncate">
-                    {metrics.biggestSpender.name}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Pembelian Tertinggi</p>
+                  <h3 className="text-2xl font-bold mt-1 text-amber-600 dark:text-amber-400">
                     {formatRupiah(metrics.biggestSpender.spend)}
-                  </div>
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[170px]">
+                    {metrics.biggestSpender.name || "-"}
+                  </p>
+                </div>
+                <div className="rounded-full bg-amber-500/10 p-3 text-amber-600 dark:text-amber-400 shrink-0">
+                  <CrownIcon className="size-6" />
                 </div>
               </div>
-              <div className="mt-4 h-5" />
             </Card>
 
-            {/* Card 4: Outstanding Debt */}
-            <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs transition-all hover:shadow-md hover:border-border">
+            <Card className="p-4 border">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground">Outstanding Debt</span>
-                <AlertTriangleIcon className="size-4 text-rose-500" />
-              </div>
-              <div className="mt-3">
-                <div className="text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-500">
-                  {formatRupiah(metrics.outstandingDebt)}
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Total Piutang</p>
+                  <h3 className="text-2xl font-bold mt-1 text-rose-600 dark:text-rose-500">
+                    {formatRupiah(metrics.outstandingDebt)}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">{metrics.customersWithDebt} pelanggan belum lunas</p>
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Total unpaid amount
+                <div className="rounded-full bg-rose-500/10 p-3 text-rose-600 dark:text-rose-400">
+                  <AlertTriangleIcon className="size-6" />
                 </div>
-              </div>
-              <div className="mt-4">
-                <span className="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-600 dark:bg-rose-950/50 dark:text-rose-400">
-                  {metrics.customersWithDebt} customers with debt
-                </span>
               </div>
             </Card>
           </div>

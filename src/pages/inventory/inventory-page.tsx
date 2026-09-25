@@ -252,41 +252,63 @@ export default function InventoryPage() {
         )}
 
         {/* 4 KPI Cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Item Produk</span>
-              <BoxesIcon className="size-4 text-muted-foreground/70" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Total Item Produk</p>
+                <h3 className="text-2xl font-bold mt-1">{metrics.total_items}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">SKU terpantau sistem</p>
+              </div>
+              <div className="rounded-full bg-blue-500/10 p-3 text-blue-600 dark:text-blue-400">
+                <BoxesIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-3xl font-bold tracking-tight text-foreground">{metrics.total_items}</div>
-            <div className="mt-2 text-xs text-muted-foreground">SKU terpantau di sistem</div>
           </Card>
 
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Fisik Unit</span>
-              <WarehouseIcon className="size-4 text-muted-foreground/70" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Total Fisik Unit</p>
+                <h3 className="text-2xl font-bold mt-1 text-indigo-600 dark:text-indigo-400">
+                  {metrics.total_physical_units.toLocaleString("id-ID")}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Unit di seluruh gudang</p>
+              </div>
+              <div className="rounded-full bg-indigo-500/10 p-3 text-indigo-600 dark:text-indigo-400">
+                <WarehouseIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-3xl font-bold tracking-tight text-foreground">{metrics.total_physical_units.toLocaleString("id-ID")}</div>
-            <div className="mt-2 text-xs text-muted-foreground">Unit barang di seluruh gudang</div>
           </Card>
 
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Stok Kritis / Habis</span>
-              <AlertTriangleIcon className="size-4 text-amber-500" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Stok Kritis / Habis</p>
+                <h3 className="text-2xl font-bold mt-1 text-amber-600 dark:text-amber-500">
+                  {metrics.critical_stock_count}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Di bawah batas aman</p>
+              </div>
+              <div className="rounded-full bg-amber-500/10 p-3 text-amber-600 dark:text-amber-400">
+                <AlertTriangleIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-3xl font-bold tracking-tight text-amber-600 dark:text-amber-500">{metrics.critical_stock_count}</div>
-            <div className="mt-2 text-xs text-muted-foreground">Di bawah batas minimum aman</div>
           </Card>
 
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Valuasi Stok</span>
-              <DollarSignIcon className="size-4 text-emerald-500" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Total Valuasi Stok</p>
+                <h3 className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
+                  {formatRupiah(metrics.total_valuation)}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Nilai modal aset tersimpan</p>
+              </div>
+              <div className="rounded-full bg-emerald-500/10 p-3 text-emerald-600 dark:text-emerald-400">
+                <DollarSignIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-2xl font-bold tracking-tight text-foreground">{formatRupiah(metrics.total_valuation)}</div>
-            <div className="mt-2 text-xs text-muted-foreground">Nilai modal aset tersimpan</div>
           </Card>
         </div>
 

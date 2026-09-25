@@ -288,49 +288,65 @@ export default function PaymentsPage() {
         )}
 
         {/* 4 KPI Cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Kas Terverifikasi</span>
-              <CheckCircle2Icon className="size-4 text-emerald-500" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Kas Terverifikasi</p>
+                <h3 className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-500">
+                  {formatRupiah(metrics.totalSettled)}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{metrics.verifiedCount} transaksi settlement</p>
+              </div>
+              <div className="rounded-full bg-emerald-500/10 p-3 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2Icon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-500">
-              {formatRupiah(metrics.totalSettled)}
-            </div>
-            <div className="mt-2 text-xs text-muted-foreground">{metrics.verifiedCount} transaksi telah settlement</div>
           </Card>
 
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pending Kliring / Giro</span>
-              <ClockIcon className="size-4 text-amber-500" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Pending Kliring</p>
+                <h3 className="text-2xl font-bold mt-1 text-amber-600 dark:text-amber-500">
+                  {formatRupiah(metrics.pendingAmount)}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{metrics.pendingCount} setoran belum kliring</p>
+              </div>
+              <div className="rounded-full bg-amber-500/10 p-3 text-amber-600 dark:text-amber-400">
+                <ClockIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-500">
-              {formatRupiah(metrics.pendingAmount)}
-            </div>
-            <div className="mt-2 text-xs text-muted-foreground">{metrics.pendingCount} setoran menunggu kliring bank</div>
           </Card>
 
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Bukti Bayar Masuk</span>
-              <CreditCardIcon className="size-4 text-muted-foreground/70" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Total Bukti Bayar</p>
+                <h3 className="text-2xl font-bold mt-1">
+                  {metrics.verifiedCount + metrics.pendingCount}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Transaksi penerimaan</p>
+              </div>
+              <div className="rounded-full bg-blue-500/10 p-3 text-blue-600 dark:text-blue-400">
+                <CreditCardIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-2xl font-bold tracking-tight text-foreground">
-              {metrics.verifiedCount + metrics.pendingCount}
-            </div>
-            <div className="mt-2 text-xs text-muted-foreground">Transaksi penerimaan tercatat</div>
           </Card>
 
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Saluran Kas Terbanyak</span>
-              <LandmarkIcon className="size-4 text-indigo-500" />
+              <div className="overflow-hidden">
+                <p className="text-xs font-medium text-muted-foreground uppercase">Saluran Terbanyak</p>
+                <h3 className="text-2xl font-bold mt-1 text-purple-600 dark:text-purple-400 truncate max-w-[170px]" title={metrics.topChannel}>
+                  {metrics.topChannel}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Dominasi pembayaran</p>
+              </div>
+              <div className="rounded-full bg-purple-500/10 p-3 text-purple-600 dark:text-purple-400 shrink-0">
+                <LandmarkIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-sm font-bold tracking-tight text-indigo-700 dark:text-indigo-400 truncate" title={metrics.topChannel}>
-              {metrics.topChannel}
-            </div>
-            <div className="mt-2 text-xs text-muted-foreground">Dominasi saluran pembayaran masuk</div>
           </Card>
         </div>
 

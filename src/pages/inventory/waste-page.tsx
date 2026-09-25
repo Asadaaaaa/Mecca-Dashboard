@@ -256,41 +256,63 @@ export default function WastePage() {
         )}
 
         {/* 4 KPI Cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Insiden Waste</span>
-              <AlertCircleIcon className="size-4 text-muted-foreground/70" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Insiden Waste</p>
+                <h3 className="text-2xl font-bold mt-1">{metrics.total_incidents}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Kasus kerusakan tercatat</p>
+              </div>
+              <div className="rounded-full bg-amber-500/10 p-3 text-amber-600 dark:text-amber-400">
+                <AlertCircleIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-3xl font-bold tracking-tight text-foreground">{metrics.total_incidents}</div>
-            <div className="mt-2 text-xs text-muted-foreground">Kasus kerusakan tercatat</div>
           </Card>
 
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Unit Terbuang</span>
-              <TrashIcon className="size-4 text-rose-500" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Unit Terbuang</p>
+                <h3 className="text-2xl font-bold mt-1 text-rose-600 dark:text-rose-400">
+                  {metrics.total_units_wasted.toLocaleString("id-ID")}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Barang rusak / kedaluwarsa</p>
+              </div>
+              <div className="rounded-full bg-rose-500/10 p-3 text-rose-600 dark:text-rose-400">
+                <TrashIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-3xl font-bold tracking-tight text-rose-600 dark:text-rose-400">{metrics.total_units_wasted.toLocaleString("id-ID")}</div>
-            <div className="mt-2 text-xs text-muted-foreground">Unit barang rusak / expired</div>
           </Card>
 
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Estimasi Kerugian</span>
-              <TrendingDownIcon className="size-4 text-destructive" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Estimasi Kerugian</p>
+                <h3 className="text-2xl font-bold mt-1 text-rose-600 dark:text-rose-500">
+                  {formatRupiah(metrics.total_loss)}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Modal aset terbuang</p>
+              </div>
+              <div className="rounded-full bg-rose-500/10 p-3 text-rose-600 dark:text-rose-400">
+                <TrendingDownIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-2xl font-bold tracking-tight text-destructive">{formatRupiah(metrics.total_loss)}</div>
-            <div className="mt-2 text-xs text-muted-foreground">Total modal aset terbuang</div>
           </Card>
 
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tingkat Susut (Waste Rate)</span>
-              <ShieldCheckIcon className="size-4 text-emerald-500" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Tingkat Susut</p>
+                <h3 className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
+                  {metrics.waste_rate}%
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Di bawah batas toleransi</p>
+              </div>
+              <div className="rounded-full bg-emerald-500/10 p-3 text-emerald-600 dark:text-emerald-400">
+                <ShieldCheckIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-3xl font-bold tracking-tight text-foreground">{metrics.waste_rate}%</div>
-            <div className="mt-2 text-xs text-muted-foreground">Di bawah ambang toleransi 0.5%</div>
           </Card>
         </div>
 

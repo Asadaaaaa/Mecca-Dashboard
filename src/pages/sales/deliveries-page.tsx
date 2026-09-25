@@ -250,41 +250,63 @@ export default function DeliveriesPage() {
         )}
 
         {/* 4 KPI Cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Surat Jalan</span>
-              <TruckIcon className="size-4 text-muted-foreground/70" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Total Surat Jalan</p>
+                <h3 className="text-2xl font-bold mt-1">{metrics.totalDeliveries}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Surat jalan diterbitkan</p>
+              </div>
+              <div className="rounded-full bg-blue-500/10 p-3 text-blue-600 dark:text-blue-400">
+                <TruckIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-3xl font-bold tracking-tight text-foreground">{metrics.totalDeliveries}</div>
-            <div className="mt-2 text-xs text-muted-foreground">Surat jalan diterbitkan</div>
           </Card>
 
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Siap Dimuat</span>
-              <ClockIcon className="size-4 text-purple-500" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Siap Dimuat</p>
+                <h3 className="text-2xl font-bold mt-1 text-purple-600 dark:text-purple-400">
+                  {metrics.readyCount}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Menunggu konfirmasi potong stok</p>
+              </div>
+              <div className="rounded-full bg-purple-500/10 p-3 text-purple-600 dark:text-purple-400">
+                <ClockIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-3xl font-bold tracking-tight text-purple-600 dark:text-purple-400">{metrics.readyCount}</div>
-            <div className="mt-2 text-xs text-muted-foreground">Menunggu konfirmasi potong stok</div>
           </Card>
 
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Dalam Perjalanan</span>
-              <NavigationIcon className="size-4 text-blue-500" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Dalam Perjalanan</p>
+                <h3 className="text-2xl font-bold mt-1 text-blue-600 dark:text-blue-400">
+                  {metrics.inTransitCount}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Stok telah dipotong gudang</p>
+              </div>
+              <div className="rounded-full bg-blue-500/10 p-3 text-blue-600 dark:text-blue-400">
+                <NavigationIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-3xl font-bold tracking-tight text-blue-600 dark:text-blue-400">{metrics.inTransitCount}</div>
-            <div className="mt-2 text-xs text-muted-foreground">Stok telah dipotong dari gudang</div>
           </Card>
 
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Telah Diterima</span>
-              <CheckCircle2Icon className="size-4 text-emerald-500" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Telah Diterima</p>
+                <h3 className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
+                  {metrics.deliveredCount}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">On-Time Rate: {metrics.onTimeRate}%</p>
+              </div>
+              <div className="rounded-full bg-emerald-500/10 p-3 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2Icon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">{metrics.deliveredCount}</div>
-            <div className="mt-2 text-xs text-muted-foreground">On-Time Rate: {metrics.onTimeRate}%</div>
           </Card>
         </div>
 

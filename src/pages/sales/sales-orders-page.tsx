@@ -239,47 +239,65 @@ export default function SalesOrdersPage() {
         )}
 
         {/* 4 KPI Cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Pesanan</span>
-              <ShoppingCartIcon className="size-4 text-muted-foreground/70" />
-            </div>
-            <div className="mt-3 text-3xl font-bold tracking-tight text-foreground">{metrics.totalOrders}</div>
-            <div className="mt-2 text-xs text-muted-foreground">Pesanan terdaftar</div>
-          </Card>
-
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Nilai Order</span>
-              <DollarSignIcon className="size-4 text-emerald-500" />
-            </div>
-            <div className="mt-3 text-2xl font-bold tracking-tight text-foreground">{formatRupiah(metrics.totalAmount)}</div>
-            <div className="mt-2 text-xs text-muted-foreground">Omzet pesanan penjualan</div>
-          </Card>
-
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Siap / Dalam Kirim</span>
-              <TruckIcon className="size-4 text-blue-500" />
-            </div>
-            <div className="mt-3 text-3xl font-bold tracking-tight text-blue-600 dark:text-blue-400">
-              {metrics.readyToShip + metrics.inDeliveryProcess}
-            </div>
-            <div className="mt-2 text-xs text-muted-foreground">
-              {metrics.readyToShip} Siap Kirim, {metrics.inDeliveryProcess} Proses Kirim
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Total Pesanan</p>
+                <h3 className="text-2xl font-bold mt-1">{metrics.totalOrders}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Pesanan terdaftar</p>
+              </div>
+              <div className="rounded-full bg-blue-500/10 p-3 text-blue-600 dark:text-blue-400">
+                <ShoppingCartIcon className="size-6" />
+              </div>
             </div>
           </Card>
 
-          <Card className="rounded-xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md transition-all">
+          <Card className="p-4 border">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Selesai Dikirim</span>
-              <PackageCheckIcon className="size-4 text-emerald-500" />
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Total Nilai Order</p>
+                <h3 className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">
+                  {formatRupiah(metrics.totalAmount)}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Omzet pesanan penjualan</p>
+              </div>
+              <div className="rounded-full bg-emerald-500/10 p-3 text-emerald-600 dark:text-emerald-400">
+                <DollarSignIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-3 text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
-              {metrics.completedDeliveries}
+          </Card>
+
+          <Card className="p-4 border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Siap / Dalam Kirim</p>
+                <h3 className="text-2xl font-bold mt-1 text-blue-600 dark:text-blue-400">
+                  {metrics.readyToShip + metrics.inDeliveryProcess}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {metrics.readyToShip} Siap Kirim, {metrics.inDeliveryProcess} Proses Kirim
+                </p>
+              </div>
+              <div className="rounded-full bg-blue-500/10 p-3 text-blue-600 dark:text-blue-400">
+                <TruckIcon className="size-6" />
+              </div>
             </div>
-            <div className="mt-2 text-xs text-muted-foreground">Seluruh item telah terkirim</div>
+          </Card>
+
+          <Card className="p-4 border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase">Selesai Dikirim</p>
+                <h3 className="text-2xl font-bold mt-1 text-purple-600 dark:text-purple-400">
+                  {metrics.completedDeliveries}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Seluruh item telah terkirim</p>
+              </div>
+              <div className="rounded-full bg-purple-500/10 p-3 text-purple-600 dark:text-purple-400">
+                <PackageCheckIcon className="size-6" />
+              </div>
+            </div>
           </Card>
         </div>
 
