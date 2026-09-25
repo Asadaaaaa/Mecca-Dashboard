@@ -199,7 +199,7 @@ export function UserDialog({
                 <Input
                   id="email"
                   type="email"
-                  placeholder="syarif@mecca.com"
+                  placeholder="syarif@mecca.co.id"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="h-9 text-sm"

@@ -76,7 +76,7 @@ export function LoginForm({
                 <Input
                   id="email"
                   type="text"
-                  placeholder="johndoe@gmail.com"
+                  placeholder="admin@mecca.co.id"
                   value={identity}
                   onChange={(e) => setIdentity(e.target.value)}
                   disabled={loading}

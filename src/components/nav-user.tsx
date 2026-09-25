@@ -42,7 +42,7 @@ export function NavUser({
   const currentUser = authService.getUser()
 
   const displayName = user?.name || currentUser?.name || "Administrator"
-  const displayEmail = user?.email || currentUser?.email || "admin@mecca.com"
+  const displayEmail = user?.email || currentUser?.email || "admin@mecca.co.id"
   const userRole =
     user?.role ||
     (currentUser?.roles && currentUser.roles.length > 0

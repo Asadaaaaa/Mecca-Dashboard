@@ -304,7 +304,7 @@ export default function DeliveriesPage() {
               <div class="company-name">MECCA DISTRIBUTION</div>
               <div class="company-sub">PT MECCA DISTRIBUSI SOLUSINDO</div>
               <div class="company-address">Kawasan Pergudangan Cakung Blok B-12, Jakarta Timur 13910</div>
-              <div class="company-address">Telp: (021) 8901-2345 | logistic@mecca.com</div>
+              <div class="company-address">Telp: (021) 8901-2345 | logistic@mecca.co.id</div>
             </div>
             <div class="doc-badge">
               <div class="doc-title">SURAT JALAN</div>
@@ -1113,7 +1113,7 @@ export default function DeliveriesPage() {
                     <h2 className="text-lg font-bold tracking-tight text-slate-900">MECCA DISTRIBUTION</h2>
                     <p className="text-[11px] font-medium text-slate-600">PT Mecca Distribusi Solusindo</p>
                     <p className="text-[10px] text-slate-500">Kawasan Pergudangan Cakung Blok B-12, Jakarta Timur</p>
-                    <p className="text-[10px] text-slate-500">Telp: (021) 8901-2345 | logistic@mecca.com</p>
+                    <p className="text-[10px] text-slate-500">Telp: (021) 8901-2345 | logistic@mecca.co.id</p>
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-bold uppercase tracking-wider text-slate-900">SURAT JALAN</div>
