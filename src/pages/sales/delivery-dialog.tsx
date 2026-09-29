@@ -13,7 +13,9 @@ import { Label } from "@/components/ui/label"
 import { deliveryService } from "@/services/delivery.service"
 import { salesOrderService } from "@/services/sales-order.service"
 import type { SalesOrder } from "@/types/sales-order.types"
-import { Loader2Icon, TruckIcon, ShieldAlertIcon } from "lucide-react"
+import { Loader2Icon, TruckIcon, ShieldAlertIcon, CheckSquare, Square } from "lucide-react"
+import { useFormDraft } from "@/hooks/use-form-draft"
+import { DraftBanner } from "@/components/ui/draft-banner"
 
 interface DeliveryDialogProps {
   open: boolean
@@ -23,6 +25,8 @@ interface DeliveryDialogProps {
 }
 
 interface DeliveryItemRow {
+  sales_order_id: number
+  sales_order_number: string
   sales_order_item_id: number
   product_id: number
   productCode: string
@@ -32,6 +36,15 @@ interface DeliveryItemRow {
   remainingQty: number
   physicalStock: number
   shipQty: number
+}
+
+interface DeliveryDraftData {
+  selectedSoIds: number[]
+  deliveryDate: string
+  courierFleet: string
+  trackingNumber: string
+  notes: string
+  items: DeliveryItemRow[]
 }
 
 export function DeliveryDialog({
@@ -44,15 +57,29 @@ export function DeliveryDialog({
   const [fetchingSo, setFetchingSo] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [salesOrders, setSalesOrders] = useState<SalesOrder[]>([])
-  const [selectedSoId, setSelectedSoId] = useState<number | "">("")
-  const [selectedSo, setSelectedSo] = useState<SalesOrder | null>(null)
+  const [allSalesOrders, setAllSalesOrders] = useState<SalesOrder[]>([])
+  const [selectedSoIds, setSelectedSoIds] = useState<number[]>([])
 
   const [deliveryDate, setDeliveryDate] = useState(new Date().toISOString().slice(0, 10))
   const [courierFleet, setCourierFleet] = useState("")
   const [trackingNumber, setTrackingNumber] = useState("")
   const [notes, setNotes] = useState("")
   const [items, setItems] = useState<DeliveryItemRow[]>([])
+
+  const draftData: DeliveryDraftData = {
+    selectedSoIds,
+    deliveryDate,
+    courierFleet,
+    trackingNumber,
+    notes,
+    items,
+  }
+
+  const { hasDraft, savedAt, getDraft, clearDraft } = useFormDraft<DeliveryDraftData>(
+    "create_delivery",
+    draftData,
+    open
+  )
 
   useEffect(() => {
     if (open) {
@@ -62,62 +89,124 @@ export function DeliveryDialog({
       setTrackingNumber("")
       setNotes("")
       setItems([])
+      setSelectedSoIds([])
 
-      // Load available Sales Orders (not cancelled or completely shipped, or include preselected)
-      salesOrderService.getSalesOrders({ limit: 100 }).then((res) => {
-        const eligible = (res.items || []).filter(
-          (so) => so.status !== "Dibatalkan" && (so.status !== "Selesai Dikirim" || so.id === preselectedSoId)
-        )
-        setSalesOrders(eligible)
+      salesOrderService
+        .getSalesOrders({ limit: 100 })
+        .then((res) => {
+          const eligible = (res.items || []).filter(
+            (so) =>
+              so.status !== "Dibatalkan" &&
+              (so.status !== "Selesai Dikirim" || so.id === preselectedSoId)
+          )
+          setAllSalesOrders(eligible)
 
-        if (preselectedSoId) {
-          setSelectedSoId(preselectedSoId)
-          loadSoDetails(preselectedSoId)
-        } else if (eligible.length > 0) {
-          setSelectedSoId(eligible[0].id)
-          loadSoDetails(eligible[0].id)
-        }
-      }).catch(() => {})
+          if (preselectedSoId) {
+            setSelectedSoIds([preselectedSoId])
+            loadMultipleSoDetails([preselectedSoId])
+          } else if (eligible.length > 0) {
+            setSelectedSoIds([eligible[0].id])
+            loadMultipleSoDetails([eligible[0].id])
+          }
+        })
+        .catch(() => {})
     }
   }, [open, preselectedSoId])
 
-  const loadSoDetails = async (soId: number) => {
-    setFetchingSo(true)
-    try {
-      const so = await salesOrderService.getSalesOrderById(soId)
-      setSelectedSo(so)
-      if (so && so.items) {
-        const warehouseId = so.warehouse_id || 1
-        const rows: DeliveryItemRow[] = await Promise.all(
-          so.items.map(async (it) => {
-            const ord = it.quantity || 0
-            const del = it.delivered_quantity || 0
-            const rem = Math.max(0, ord - del)
-            let phys = 0
-            try {
-              if (warehouseId) {
-                const stock = await salesOrderService.getAvailableStock(warehouseId, it.product_id)
-                phys = Number(stock.physicalStock) || 0
-              }
-            } catch {
-              // fallback
-            }
+  const handleRestoreDraft = () => {
+    const draft = getDraft()
+    if (draft) {
+      setSelectedSoIds(draft.selectedSoIds || [])
+      setDeliveryDate(draft.deliveryDate || new Date().toISOString().slice(0, 10))
+      setCourierFleet(draft.courierFleet || "")
+      setTrackingNumber(draft.trackingNumber || "")
+      setNotes(draft.notes || "")
+      setItems(draft.items || [])
+    }
+  }
 
-            return {
-              sales_order_item_id: it.id || 0,
-              product_id: it.product_id,
-              productCode: it.product?.code || it.productCode || "-",
-              productName: it.product?.name || it.productName || "-",
-              orderedQty: ord,
-              deliveredQty: del,
-              remainingQty: rem,
-              physicalStock: phys,
-              shipQty: Math.min(rem, Math.max(0, phys)),
+  // Identify active customer and warehouse from selected SOs
+  const activePrimarySo = allSalesOrders.find((so) =>
+    selectedSoIds.includes(so.id)
+  )
+  const activeCustomerId = activePrimarySo?.customer_id
+  const activeCustomerName =
+    activePrimarySo?.customerName ||
+    (typeof activePrimarySo?.customer === "object"
+      ? activePrimarySo.customer?.name
+      : activePrimarySo?.customer) ||
+    "-"
+  const activeWarehouseId = activePrimarySo?.warehouse_id || 1
+  const activeWarehouseName =
+    typeof activePrimarySo?.warehouse === "object"
+      ? activePrimarySo.warehouse?.name || "Gudang Utama"
+      : activePrimarySo?.warehouse || "Gudang Utama"
+
+  // Filter available SOs that match the active customer & warehouse
+  const compatibleSalesOrders = allSalesOrders.filter((so) => {
+    if (!activeCustomerId) return true
+    return (
+      so.customer_id === activeCustomerId &&
+      (so.warehouse_id || 1) === activeWarehouseId
+    )
+  })
+
+  const loadMultipleSoDetails = async (soIds: number[]) => {
+    if (soIds.length === 0) {
+      setItems([])
+      return
+    }
+
+    setFetchingSo(true)
+    setError(null)
+    try {
+      const detailedOrders = await Promise.all(
+        soIds.map((id) => salesOrderService.getSalesOrderById(id))
+      )
+
+      const accumulatedRows: DeliveryItemRow[] = []
+
+      for (const so of detailedOrders) {
+        if (!so || !so.items) continue
+        const warehouseId = so.warehouse_id || 1
+        const soNumber = so.orderNo || `SO #${so.id}`
+
+        for (const it of so.items) {
+          const ord = it.quantity || 0
+          const del = it.delivered_quantity || 0
+          const rem = Math.max(0, ord - del)
+          if (rem <= 0) continue // Skip items already fully delivered
+
+          let phys = 0
+          try {
+            if (warehouseId) {
+              const stock = await salesOrderService.getAvailableStock(
+                warehouseId,
+                it.product_id
+              )
+              phys = Number(stock.physicalStock) || 0
             }
+          } catch {
+            // fallback
+          }
+
+          accumulatedRows.push({
+            sales_order_id: so.id,
+            sales_order_number: soNumber,
+            sales_order_item_id: it.id || 0,
+            product_id: it.product_id,
+            productCode: it.product?.code || it.productCode || "-",
+            productName: it.product?.name || it.productName || "-",
+            orderedQty: ord,
+            deliveredQty: del,
+            remainingQty: rem,
+            physicalStock: phys,
+            shipQty: Math.min(rem, Math.max(0, phys)),
           })
-        )
-        setItems(rows)
+        }
       }
+
+      setItems(accumulatedRows)
     } catch {
       setError("Gagal memuat detail Sales Order terpilih.")
     } finally {
@@ -125,14 +214,15 @@ export function DeliveryDialog({
     }
   }
 
-  const handleSoChange = (soId: number | "") => {
-    setSelectedSoId(soId)
-    if (soId) {
-      loadSoDetails(Number(soId))
+  const toggleSoSelection = (soId: number) => {
+    let nextIds: number[]
+    if (selectedSoIds.includes(soId)) {
+      nextIds = selectedSoIds.filter((id) => id !== soId)
     } else {
-      setSelectedSo(null)
-      setItems([])
+      nextIds = [...selectedSoIds, soId]
     }
+    setSelectedSoIds(nextIds)
+    loadMultipleSoDetails(nextIds)
   }
 
   const handleShipQtyChange = (idx: number, qty: number) => {
@@ -146,8 +236,8 @@ export function DeliveryDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedSoId) {
-      setError("Pilih Sales Order terlebih dahulu.")
+    if (selectedSoIds.length === 0) {
+      setError("Pilih minimal 1 Sales Order terlebih dahulu.")
       return
     }
 
@@ -160,12 +250,14 @@ export function DeliveryDialog({
     // Check if any shipQty exceeds remaining or physical stock
     for (const it of validItems) {
       if (it.shipQty > it.remainingQty) {
-        setError(`Jumlah kirim untuk "${it.productName}" melebihi sisa pesanan (${it.remainingQty}).`)
+        setError(
+          `Jumlah kirim untuk "${it.productName}" [${it.sales_order_number}] melebihi sisa pesanan (${it.remainingQty}).`
+        )
         return
       }
       if (it.shipQty > it.physicalStock) {
         setError(
-          `Jumlah kirim untuk "${it.productName}" (${it.shipQty}) melebihi stok fisik gudang (${it.physicalStock}). Pengiriman tidak dapat dilakukan untuk mencegah stok fisik menjadi minus.`
+          `Jumlah kirim untuk "${it.productName}" (${it.shipQty}) melebihi stok fisik gudang (${it.physicalStock}). Pengiriman tidak dapat dilakukan untuk mencegah stok fisik minus.`
         )
         return
       }
@@ -176,18 +268,20 @@ export function DeliveryDialog({
 
     try {
       await deliveryService.createDelivery({
-        sales_order_id: Number(selectedSoId),
-        warehouse_id: selectedSo?.warehouse_id || undefined,
+        sales_order_ids: selectedSoIds,
+        warehouse_id: activeWarehouseId,
         delivery_date: deliveryDate,
         courier_fleet: courierFleet || undefined,
         tracking_number: trackingNumber || undefined,
         notes: notes || undefined,
         items: validItems.map((it) => ({
+          sales_order_id: it.sales_order_id,
           sales_order_item_id: it.sales_order_item_id,
           product_id: it.product_id,
           quantity: Number(it.shipQty),
         })),
       })
+      clearDraft()
       onOpenChange(false)
       onSuccess()
     } catch (err: unknown) {
@@ -200,20 +294,29 @@ export function DeliveryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[720px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <TruckIcon className="size-5" />
             </div>
             <div>
-              <DialogTitle className="text-base font-semibold">Buat Surat Jalan (Delivery Order)</DialogTitle>
+              <DialogTitle className="text-base font-semibold">
+                Buat Surat Jalan (Delivery Order)
+              </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                Generate dokumen pengiriman dan alokasi item untuk pesanan penjualan
+                Konsolidasikan pengiriman dari satu atau beberapa Sales Order (Multi-SO) sekaligus
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
+
+        <DraftBanner
+          hasDraft={hasDraft}
+          savedAt={savedAt}
+          onRestore={handleRestoreDraft}
+          onDiscard={clearDraft}
+        />
 
         {error && (
           <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md text-red-500 text-xs">
@@ -222,43 +325,74 @@ export function DeliveryDialog({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4 py-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label className="text-xs font-medium">Referensi Sales Order *</Label>
-              <select
-                value={selectedSoId}
-                onChange={(e) => handleSoChange(Number(e.target.value) || "")}
-                required
-                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="">-- Pilih Sales Order --</option>
-                {salesOrders.map((so) => (
-                  <option key={so.id} value={so.id}>
-                    {so.orderNo} - {so.customerName} ({so.status})
-                  </option>
-                ))}
-              </select>
+          {/* Multi-SO Selection Area */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Pilih Sales Order (Konsolidasi Multi-SO) *
+              </Label>
+              <span className="text-[11px] text-muted-foreground">
+                {selectedSoIds.length} SO Terpilih
+              </span>
             </div>
 
-            {selectedSo && (
-              <div className="sm:col-span-2 bg-muted/40 p-2.5 rounded-lg border border-border/60 text-xs flex justify-between items-center">
+            <div className="rounded-lg border bg-muted/20 p-3 space-y-2.5 max-h-48 overflow-y-auto">
+              {compatibleSalesOrders.length === 0 ? (
+                <div className="text-center py-3 text-xs text-muted-foreground">
+                  Tidak ada Sales Order siap kirim ditemukan
+                </div>
+              ) : (
+                compatibleSalesOrders.map((so) => {
+                  const isChecked = selectedSoIds.includes(so.id)
+                  return (
+                    <div
+                      key={so.id}
+                      onClick={() => toggleSoSelection(so.id)}
+                      className={`flex items-center justify-between p-2 rounded-md border text-xs cursor-pointer transition-colors ${
+                        isChecked
+                          ? "bg-primary/10 border-primary/40 font-medium text-foreground"
+                          : "hover:bg-muted/40 border-border/50 text-muted-foreground"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        {isChecked ? (
+                          <CheckSquare className="size-4 text-primary shrink-0" />
+                        ) : (
+                          <Square className="size-4 text-muted-foreground shrink-0" />
+                        )}
+                        <div>
+                          <span className="font-semibold text-foreground">{so.orderNo}</span>
+                          <span className="ml-2 text-[11px] text-muted-foreground">
+                            {so.customerName}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-muted font-mono">
+                          {so.status}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+
+            {activePrimarySo && (
+              <div className="bg-muted/40 p-2.5 rounded-lg border border-border/60 text-xs flex justify-between items-center">
                 <div>
-                  <span className="text-muted-foreground">Customer: </span>
-                  <span className="font-semibold text-foreground">
-                    {selectedSo.customerName || (typeof selectedSo.customer === "object" ? selectedSo.customer?.name : selectedSo.customer) || "-"}
-                  </span>
+                  <span className="text-muted-foreground">Pelanggan: </span>
+                  <span className="font-semibold text-foreground">{activeCustomerName}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Gudang: </span>
-                  <span className="font-semibold text-foreground">
-                    {typeof selectedSo.warehouse === "object"
-                      ? selectedSo.warehouse?.name || "Gudang Utama Cakung"
-                      : selectedSo.warehouse || "Gudang Utama Cakung"}
-                  </span>
+                  <span className="text-muted-foreground">Gudang Asal: </span>
+                  <span className="font-semibold text-foreground">{activeWarehouseName}</span>
                 </div>
               </div>
             )}
+          </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t">
             <div className="space-y-1.5">
               <Label className="text-xs font-medium">Tanggal Pengiriman *</Label>
               <Input
@@ -304,7 +438,7 @@ export function DeliveryDialog({
           <div className="space-y-2 pt-2 border-t">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Item yang Dikirim
+                Item yang Dikirim (Agregasi dari {selectedSoIds.length} Sales Order)
               </Label>
               {fetchingSo && (
                 <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -314,11 +448,11 @@ export function DeliveryDialog({
             </div>
 
             {items.length === 0 ? (
-              <div className="text-center py-4 text-xs text-muted-foreground border border-dashed rounded-lg">
-                Pilih Sales Order untuk memuat daftar item yang dapat dikirim
+              <div className="text-center py-6 text-xs text-muted-foreground border border-dashed rounded-lg">
+                Pilih minimal 1 Sales Order untuk memuat daftar item yang dapat dikirim
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                 {items.map((row, idx) => {
                   const isExceededPhysical = row.shipQty > row.physicalStock
                   const isOutOfStock = row.physicalStock <= 0
@@ -333,7 +467,10 @@ export function DeliveryDialog({
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex-1">
                           <div className="font-semibold text-foreground flex items-center gap-2">
-                            {row.productName}
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-300 font-mono">
+                              {row.sales_order_number}
+                            </span>
+                            <span>{row.productName}</span>
                             {isOutOfStock && (
                               <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-600 dark:text-red-400 font-medium">
                                 Stok Fisik Kosong
@@ -352,9 +489,13 @@ export function DeliveryDialog({
                             min={0}
                             max={Math.min(row.remainingQty, Math.max(0, row.physicalStock))}
                             value={row.shipQty}
-                            onChange={(e) => handleShipQtyChange(idx, parseFloat(e.target.value) || 0)}
+                            onChange={(e) =>
+                              handleShipQtyChange(idx, parseFloat(e.target.value) || 0)
+                            }
                             className={`text-xs h-8 w-24 text-right font-mono ${
-                              isExceededPhysical ? "border-red-500 text-red-500 font-bold focus-visible:ring-red-500" : ""
+                              isExceededPhysical
+                                ? "border-red-500 text-red-500 font-bold focus-visible:ring-red-500"
+                                : ""
                             }`}
                           />
                           <span className="text-[11px] text-muted-foreground">Unit</span>
@@ -390,7 +531,7 @@ export function DeliveryDialog({
             <div className="p-2.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-[11px] text-indigo-700 dark:text-indigo-300 flex items-center gap-2">
               <ShieldAlertIcon className="size-4 shrink-0 text-indigo-500" />
               <span>
-                <strong>Restriksi Mutlak Anti-Minus:</strong> Surat Jalan memotong stok fisik riil gudang. Pengiriman tidak dapat melebihi stok fisik yang tersedia dan tidak dapat di-bypass via PIN.
+                <strong>Restriksi Mutlak Anti-Minus:</strong> Surat Jalan memotong stok fisik riil gudang. Pengiriman tidak dapat melebihi stok fisik yang tersedia dan tidak dapat di-bypass.
               </span>
             </div>
           </div>

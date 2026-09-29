@@ -18,7 +18,9 @@ import type {
   Unit,
   Tax,
 } from "@/types/product.types"
-import { Loader2Icon, PackageIcon, AlertCircleIcon } from "lucide-react"
+import { Loader2Icon, PackageIcon, AlertCircleIcon, Sparkles } from "lucide-react"
+import { useFormDraft } from "@/hooks/use-form-draft"
+import { DraftBanner } from "@/components/ui/draft-banner"
 
 interface ProductDialogProps {
   open: boolean
@@ -39,6 +41,7 @@ export function ProductDialog({
     name: "",
     category_id: null,
     unit_id: 1, // Default PCS
+    cost_price: 0,
     selling_price: 0,
     tax_id: null,
     description: "",
@@ -49,7 +52,14 @@ export function ProductDialog({
   const [units, setUnits] = useState<Unit[]>([])
   const [taxes, setTaxes] = useState<Tax[]>([])
   const [loading, setLoading] = useState(false)
+  const [generatingSku, setGeneratingSku] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const { hasDraft, savedAt, getDraft, clearDraft } = useFormDraft<ProductFormData>(
+    "create_product",
+    formData,
+    open && !isEdit
+  )
 
   useEffect(() => {
     if (open) {
@@ -64,6 +74,7 @@ export function ProductDialog({
         name: product.name || "",
         category_id: product.category_id || null,
         unit_id: product.unit_id || 1,
+        cost_price: product.cost_price ? Number(product.cost_price) : 0,
         selling_price: product.selling_price ? Number(product.selling_price) : 0,
         tax_id: product.tax_id || null,
         description: product.description || "",
@@ -75,6 +86,7 @@ export function ProductDialog({
         name: "",
         category_id: categories.length > 0 ? categories[0].id : null,
         unit_id: units.length > 0 ? units[0].id : 1,
+        cost_price: 0,
         selling_price: 0,
         tax_id: taxes.length > 0 ? taxes[0].id : null,
         description: "",
@@ -99,6 +111,27 @@ export function ProductDialog({
     }
   }
 
+  const handleGenerateSku = async () => {
+    try {
+      setGeneratingSku(true)
+      const sku = await productService.generateSku()
+      if (sku) {
+        setFormData((prev) => ({ ...prev, code: sku }))
+      }
+    } catch (err) {
+      console.error("Failed to generate SKU:", err)
+    } finally {
+      setGeneratingSku(false)
+    }
+  }
+
+  const handleRestoreDraft = () => {
+    const draft = getDraft()
+    if (draft) {
+      setFormData(draft)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.name.trim()) {
@@ -118,9 +151,13 @@ export function ProductDialog({
         ...formData,
         category_id: formData.category_id ? Number(formData.category_id) : null,
         unit_id: Number(formData.unit_id),
+        cost_price: Number(formData.cost_price) || 0,
         selling_price: Number(formData.selling_price) || 0,
         tax_id: formData.tax_id ? Number(formData.tax_id) : null,
       })
+      if (!isEdit) {
+        clearDraft()
+      }
       onOpenChange(false)
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string }
@@ -149,6 +186,13 @@ export function ProductDialog({
           </div>
         </DialogHeader>
 
+        <DraftBanner
+          hasDraft={hasDraft}
+          savedAt={savedAt}
+          onRestore={handleRestoreDraft}
+          onDiscard={clearDraft}
+        />
+
         {error && (
           <div className="flex items-start gap-2.5 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive font-medium my-2">
             <AlertCircleIcon className="size-4 shrink-0 mt-0.5" />
@@ -163,13 +207,31 @@ export function ProductDialog({
                 <Label htmlFor="prd-code" className="text-xs font-semibold">
                   Kode / SKU Produk
                 </Label>
-                <Input
-                  id="prd-code"
-                  placeholder="Otomatis (misal PRD-001)"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  className="h-9 text-sm font-mono"
-                />
+                <div className="flex gap-1.5">
+                  <Input
+                    id="prd-code"
+                    placeholder="Manual / klik Generate"
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    className="h-9 text-sm font-mono flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateSku}
+                    disabled={generatingSku}
+                    className="h-9 px-2.5 text-xs text-muted-foreground hover:text-foreground shrink-0"
+                    title="Generate SKU Otomatis"
+                  >
+                    {generatingSku ? (
+                      <Loader2Icon className="size-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="size-3.5 mr-1 text-primary" />
+                    )}
+                    Generate
+                  </Button>
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="prd-status" className="text-xs font-semibold">
@@ -253,6 +315,26 @@ export function ProductDialog({
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
+                <Label htmlFor="prd-cost-price" className="text-xs font-semibold">
+                  Harga Modal / HPP (IDR)
+                </Label>
+                <Input
+                  id="prd-cost-price"
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={formData.cost_price || 0}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      cost_price: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  className="h-9 text-sm font-mono"
+                />
+              </div>
+
+              <div className="space-y-1.5">
                 <Label htmlFor="prd-price" className="text-xs font-semibold">
                   Harga Jual (IDR) <span className="text-destructive">*</span>
                 </Label>
@@ -272,30 +354,30 @@ export function ProductDialog({
                   required
                 />
               </div>
+            </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="prd-tax" className="text-xs font-semibold">
-                  Pajak (Tax)
-                </Label>
-                <select
-                  id="prd-tax"
-                  className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  value={formData.tax_id || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      tax_id: e.target.value ? Number(e.target.value) : null,
-                    })
-                  }
-                >
-                  <option value="" className="bg-popover text-popover-foreground">Tanpa Pajak</option>
-                  {taxes.map((t) => (
-                    <option key={t.id} value={t.id} className="bg-popover text-popover-foreground">
-                      {t.name} ({t.rate}%)
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="prd-tax" className="text-xs font-semibold">
+                Pajak (Tax)
+              </Label>
+              <select
+                id="prd-tax"
+                className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={formData.tax_id || ""}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    tax_id: e.target.value ? Number(e.target.value) : null,
+                  })
+                }
+              >
+                <option value="" className="bg-popover text-popover-foreground">Tanpa Pajak</option>
+                {taxes.map((t) => (
+                  <option key={t.id} value={t.id} className="bg-popover text-popover-foreground">
+                    {t.name} ({t.rate}%)
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-1.5">

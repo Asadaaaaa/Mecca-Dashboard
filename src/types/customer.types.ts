@@ -13,6 +13,7 @@ export interface Customer {
   recent_visit?: string | null;
   lifetime_spend: number | string;
   total_unpaid: number | string;
+  order_count?: number;
   status: 'active' | 'inactive';
   created_at: string;
   updated_at: string;

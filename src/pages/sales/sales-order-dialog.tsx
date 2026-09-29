@@ -20,6 +20,8 @@ import type { Warehouse, SystemSettings } from "@/types/settings.types"
 import type { Product } from "@/types/product.types"
 import type { AvailableStockInfo } from "@/types/sales-order.types"
 import { Loader2Icon, ShoppingCartIcon, PlusIcon, Trash2Icon, ShieldAlertIcon } from "lucide-react"
+import { useFormDraft } from "@/hooks/use-form-draft"
+import { DraftBanner } from "@/components/ui/draft-banner"
 
 interface SalesOrderDialogProps {
   open: boolean
@@ -31,6 +33,14 @@ interface ItemRow {
   product_id: number
   quantity: number
   unit_price: number
+}
+
+interface SalesOrderDraftData {
+  customerId: number | ""
+  warehouseId: number | ""
+  orderDate: string
+  notes: string
+  items: ItemRow[]
 }
 
 export function SalesOrderDialog({
@@ -51,6 +61,20 @@ export function SalesOrderDialog({
   const [notes, setNotes] = useState("")
   const [items, setItems] = useState<ItemRow[]>([])
   const [stockMap, setStockMap] = useState<Record<number, AvailableStockInfo>>({})
+
+  const draftData: SalesOrderDraftData = {
+    customerId,
+    warehouseId,
+    orderDate,
+    notes,
+    items,
+  }
+
+  const { hasDraft, savedAt, getDraft, clearDraft } = useFormDraft<SalesOrderDraftData>(
+    "create_sales_order",
+    draftData,
+    open
+  )
 
   // System Settings & PIN Authorization Modal States
   const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null)
@@ -173,6 +197,7 @@ export function SalesOrderDialog({
         })),
       })
       if (pinModalOpen) setPinModalOpen(false)
+      clearDraft()
       onOpenChange(false)
       onSuccess()
     } catch (err: unknown) {
@@ -186,6 +211,17 @@ export function SalesOrderDialog({
     } finally {
       setLoading(false)
       setSubmittingPin(false)
+    }
+  }
+
+  const handleRestoreDraft = () => {
+    const draft = getDraft()
+    if (draft) {
+      setCustomerId(draft.customerId || "")
+      setWarehouseId(draft.warehouseId || "")
+      setOrderDate(draft.orderDate || new Date().toISOString().slice(0, 10))
+      setNotes(draft.notes || "")
+      setItems(draft.items || [])
     }
   }
 
@@ -266,6 +302,13 @@ export function SalesOrderDialog({
             </div>
           </div>
         </DialogHeader>
+
+        <DraftBanner
+          hasDraft={hasDraft}
+          savedAt={savedAt}
+          onRestore={handleRestoreDraft}
+          onDiscard={clearDraft}
+        />
 
         {error && (
           <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md text-red-500 text-xs">

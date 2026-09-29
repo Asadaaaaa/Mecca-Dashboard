@@ -19,6 +19,7 @@ import { useTheme } from "@/components/theme-provider"
 import { customerService } from "@/services/customer.service"
 import { CustomerDialog } from "@/pages/customers/customer-dialog"
 import { ConfirmModal, type ConfirmModalVariant } from "@/components/ui/confirm-modal"
+import { usePermission } from "@/hooks/use-permission"
 import type { Customer, CustomerMetrics } from "@/types/customer.types"
 import {
   SunIcon,
@@ -64,6 +65,7 @@ function formatDate(dateStr?: string | null): string {
 
 export default function CustomersPage() {
   const { resolvedTheme, toggleTheme } = useTheme()
+  const { canDelete } = usePermission()
 
   // State
   const [metrics, setMetrics] = useState<CustomerMetrics>({
@@ -510,6 +512,8 @@ export default function CustomersPage() {
                       </div>
                     </th>
 
+                    <th className="px-4 py-3 text-center font-medium">Total Order</th>
+
                     <th
                       className="cursor-pointer px-4 py-3 font-medium hover:text-foreground transition-colors"
                       onClick={() => handleSort("total_unpaid")}
@@ -527,7 +531,7 @@ export default function CustomersPage() {
                 <tbody className="divide-y divide-border/40">
                   {loading ? (
                     <tr>
-                      <td colSpan={9} className="h-40 text-center text-muted-foreground">
+                      <td colSpan={10} className="h-40 text-center text-muted-foreground">
                         <div className="flex items-center justify-center gap-2">
                           <Loader2Icon className="size-5 animate-spin text-primary" />
                           <span>Memuat data pelanggan...</span>
@@ -536,7 +540,7 @@ export default function CustomersPage() {
                     </tr>
                   ) : customers.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="h-32 text-center text-muted-foreground">
+                      <td colSpan={10} className="h-32 text-center text-muted-foreground">
                         Tidak ada data customer yang cocok dengan kriteria.
                       </td>
                     </tr>
@@ -578,6 +582,10 @@ export default function CustomersPage() {
                             {formatRupiah(c.lifetime_spend)}
                           </td>
 
+                          <td className="px-4 py-3 text-center font-bold font-mono text-primary text-xs whitespace-nowrap">
+                            {c.order_count || 0} Order
+                          </td>
+
                           <td
                             className={`px-4 py-3 font-semibold whitespace-nowrap ${
                               hasUnpaid ? "text-rose-600 dark:text-rose-500" : "text-emerald-600 dark:text-emerald-500"
@@ -601,15 +609,17 @@ export default function CustomersPage() {
                                 <Edit2Icon className="size-3.5" />
                               </Button>
 
-                              <Button
-                                variant="ghost"
-                                size="icon-xs"
-                                onClick={() => handleDeleteSingle(c.id, c.name)}
-                                title="Hapus Customer"
-                                className="cursor-pointer hover:bg-rose-500/15 hover:text-rose-600 active:scale-90 transition-all rounded-md"
-                              >
-                                <Trash2Icon className="size-3.5" />
-                              </Button>
+                              {canDelete("customers") && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  onClick={() => handleDeleteSingle(c.id, c.name)}
+                                  title="Hapus Customer"
+                                  className="cursor-pointer hover:bg-rose-500/15 hover:text-rose-600 active:scale-90 transition-all rounded-md"
+                                >
+                                  <Trash2Icon className="size-3.5" />
+                                </Button>
+                              )}
                             </div>
                           </td>
                         </tr>

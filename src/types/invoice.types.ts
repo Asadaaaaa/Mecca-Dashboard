@@ -2,6 +2,10 @@ export interface InvoiceItemDetail {
   id?: number
   invoice_id?: number
   delivery_id?: number | null
+  delivery_number?: string
+  sales_order_id?: number | null
+  sales_order_number?: string
+  sales_order_item_id?: number | null
   product_id: number
   productCode?: string
   productName?: string
@@ -25,6 +29,7 @@ export interface Invoice {
   invoice_number?: string
   refDelivery: string
   delivery_id?: number | null
+  deliveries?: Array<{ id: number; delivery_number: string }>
   refOrder: string
   sales_order_id?: number | null
   customer_id: number
@@ -88,6 +93,7 @@ export interface InvoiceFormData {
   invoice_number?: string
   customer_id?: number
   delivery_id?: number | null
+  delivery_ids?: number[]
   sales_order_id?: number | null
   invoice_date?: string
   due_date?: string
@@ -98,6 +104,9 @@ export interface InvoiceFormData {
   items?: {
     product_id: number
     delivery_id?: number | null
+    delivery_item_id?: number | null
+    sales_order_id?: number | null
+    sales_order_item_id?: number | null
     quantity: number
     unit_price?: number
     discount_amount?: number

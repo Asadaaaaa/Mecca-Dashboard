@@ -20,6 +20,7 @@ import { ConfirmModal } from "@/components/ui/confirm-modal"
 import { invoiceService } from "@/services/invoice.service"
 import { InvoiceDialog } from "@/pages/sales/invoice-dialog"
 import { PaymentDialog } from "@/pages/sales/payment-dialog"
+import { usePermission } from "@/hooks/use-permission"
 import type { Invoice, InvoiceMetrics } from "@/types/invoice.types"
 import {
   SunIcon,
@@ -60,6 +61,7 @@ function formatRupiah(amount: number | string | undefined) {
 
 export default function InvoicesPage() {
   const { resolvedTheme, toggleTheme } = useTheme()
+  const { canDelete } = usePermission()
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [metrics, setMetrics] = useState<InvoiceMetrics>({
     totalInvoices: 0,
@@ -526,15 +528,17 @@ export default function InvoicesPage() {
                             )}
 
                             {/* Delete button */}
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              onClick={() => handleDeleteSingle(item.id, item.invoiceNo)}
-                              title="Hapus Faktur"
-                              className="cursor-pointer hover:bg-red-500/10 text-red-500 hover:text-red-600 active:scale-95 transition-all"
-                            >
-                              <Trash2Icon className="size-3.5" />
-                            </Button>
+                            {canDelete("invoices") && (
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => handleDeleteSingle(item.id, item.invoiceNo)}
+                                title="Hapus Faktur"
+                                className="cursor-pointer hover:bg-red-500/10 text-red-500 hover:text-red-600 active:scale-95 transition-all"
+                              >
+                                <Trash2Icon className="size-3.5" />
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>

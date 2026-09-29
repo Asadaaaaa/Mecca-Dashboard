@@ -75,6 +75,7 @@ export interface Product {
   category_id?: number | null
   unit_id: number
   selling_price: number
+  cost_price?: number
   tax_id?: number | null
   description?: string | null
   status: "active" | "inactive"
@@ -110,8 +111,24 @@ export interface ProductFormData {
   name: string
   category_id?: number | null
   unit_id: number
+  cost_price?: number
   selling_price: number
   tax_id?: number | null
   description?: string | null
   status: "active" | "inactive"
+}
+
+export interface BulkImportResult {
+  total_rows: number
+  success_count: number
+  created_products: number
+  updated_products: number
+  created_categories: string[]
+  created_units: string[]
+  errors: Array<{
+    row: number
+    sku: string
+    name: string
+    error: string
+  }>
 }

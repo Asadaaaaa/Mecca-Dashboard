@@ -19,6 +19,7 @@ import { useTheme } from "@/components/theme-provider"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
 import { quotationService } from "@/services/quotation.service"
 import { QuotationDialog } from "@/pages/sales/quotation-dialog"
+import { usePermission } from "@/hooks/use-permission"
 import type { Quotation, QuotationMetrics } from "@/types/quotation.types"
 import {
   SunIcon,
@@ -56,6 +57,7 @@ function formatRupiah(amount: number) {
 
 export default function QuotationsPage() {
   const { resolvedTheme, toggleTheme } = useTheme()
+  const { canDelete } = usePermission()
   const [quotations, setQuotations] = useState<Quotation[]>([])
   const [metrics, setMetrics] = useState<QuotationMetrics>({
     totalQuotations: 0,
@@ -499,15 +501,17 @@ export default function QuotationsPage() {
                             )}
 
                             {/* Delete */}
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              onClick={() => handleDeleteSingle(item.id, item.quotationNo)}
-                              title="Hapus"
-                              className="cursor-pointer hover:bg-red-500/10 text-red-500 hover:text-red-600 active:scale-95 transition-all"
-                            >
-                              <Trash2Icon className="size-3.5" />
-                            </Button>
+                            {canDelete("quotations") && (
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => handleDeleteSingle(item.id, item.quotationNo)}
+                                title="Hapus"
+                                className="cursor-pointer hover:bg-red-500/10 text-red-500 hover:text-red-600 active:scale-95 transition-all"
+                              >
+                                <Trash2Icon className="size-3.5" />
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>

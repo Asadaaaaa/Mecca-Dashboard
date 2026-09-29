@@ -18,7 +18,9 @@ import { Input } from "@/components/ui/input"
 import { useTheme } from "@/components/theme-provider"
 import { productService } from "@/services/product.service"
 import { ProductDialog } from "@/pages/products/product-dialog"
+import { BulkImportDialog } from "@/pages/products/bulk-import-dialog"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
+import { usePermission } from "@/hooks/use-permission"
 import type { Product, ProductMetrics, ProductFormData, ProductCategory, Unit } from "@/types/product.types"
 import {
   SunIcon,
@@ -38,6 +40,7 @@ import {
   Edit2Icon,
   Loader2Icon,
   CheckIcon,
+  FileSpreadsheetIcon,
 } from "lucide-react"
 
 function formatRupiah(amount: number | string) {
@@ -48,6 +51,7 @@ function formatRupiah(amount: number | string) {
 
 export default function ProductsPage() {
   const { resolvedTheme, toggleTheme } = useTheme()
+  const { canDelete } = usePermission()
 
   const [metrics, setMetrics] = useState<ProductMetrics>({
     total_products: 0,
@@ -74,6 +78,7 @@ export default function ProductsPage() {
 
   // Modals
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [bulkImportOpen, setBulkImportOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [confirmModal, setConfirmModal] = useState<{
     open: boolean
@@ -262,6 +267,15 @@ export default function ProductsPage() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setBulkImportOpen(true)}
+              className="text-xs font-medium text-emerald-600 border-emerald-600/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+            >
+              <FileSpreadsheetIcon className="size-3.5 mr-1" />
+              Bulk Import
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleExportCSV}
               className="text-xs font-medium"
             >
@@ -435,6 +449,7 @@ export default function ProductsPage() {
                   </th>
                   <th className="px-6 py-3">Kategori</th>
                   <th className="px-6 py-3 text-center">Satuan</th>
+                  <th className="px-6 py-3 text-right">Harga Modal</th>
                   <th
                     className="px-6 py-3 text-right cursor-pointer hover:bg-muted/80"
                     onClick={() => handleSort("selling_price")}
@@ -459,7 +474,7 @@ export default function ProductsPage() {
               <tbody className="divide-y">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-muted-foreground">
+                    <td colSpan={8} className="py-12 text-center text-muted-foreground">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <Loader2Icon className="size-6 animate-spin text-primary" />
                         <span>Memuat katalog produk...</span>
@@ -468,7 +483,7 @@ export default function ProductsPage() {
                   </tr>
                 ) : products.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-muted-foreground">
+                    <td colSpan={8} className="py-12 text-center text-muted-foreground">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <PackageIcon className="size-8 text-muted-foreground/50" />
                         <span>Tidak ada produk ditemukan</span>
@@ -513,6 +528,9 @@ export default function ProductsPage() {
                             {prd.unit?.code || "PCS"}
                           </span>
                         </td>
+                        <td className="px-6 py-4 text-right font-mono text-muted-foreground text-xs">
+                          {prd.cost_price ? formatRupiah(prd.cost_price) : "-"}
+                        </td>
                         <td className="px-6 py-4 text-right font-mono font-bold text-foreground">
                           {formatRupiah(prd.selling_price)}
                           {prd.tax && (
@@ -550,14 +568,16 @@ export default function ProductsPage() {
                             >
                               <Edit2Icon className="size-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-8 text-muted-foreground hover:text-destructive"
-                              onClick={() => handleDelete(prd)}
-                            >
-                              <Trash2Icon className="size-4" />
-                            </Button>
+                            {canDelete("products") && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-8 text-muted-foreground hover:text-destructive"
+                                onClick={() => handleDelete(prd)}
+                              >
+                                <Trash2Icon className="size-4" />
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -609,6 +629,17 @@ export default function ProductsPage() {
         onOpenChange={setDialogOpen}
         product={selectedProduct}
         onSave={handleSaveProduct}
+      />
+
+      {/* Bulk Import Modal Dialog */}
+      <BulkImportDialog
+        open={bulkImportOpen}
+        onOpenChange={setBulkImportOpen}
+        onSuccess={() => {
+          fetchMetrics()
+          fetchProducts()
+          showToast("Data produk berhasil diimpor!")
+        }}
       />
 
       {/* Confirm Action Modal */}

@@ -10,6 +10,7 @@ import type {
   ProductCategoryFormData,
   Unit,
   Tax,
+  BulkImportResult,
 } from "@/types/product.types"
 
 export const productService = {
@@ -50,6 +51,16 @@ export const productService = {
 
   async batchDeleteProducts(ids: number[]): Promise<{ count: number }> {
     const res = await apiClient.post("/products/batch-delete", { ids })
+    return res.data?.data
+  },
+
+  async generateSku(): Promise<string> {
+    const res = await apiClient.get("/products/generate-sku")
+    return res.data?.data?.sku || ""
+  },
+
+  async bulkImport(payload: { file?: string; file_base64?: string; raw_data?: any[]; warehouse_id?: number }): Promise<BulkImportResult> {
+    const res = await apiClient.post("/products/bulk-import", payload)
     return res.data?.data
   },
 

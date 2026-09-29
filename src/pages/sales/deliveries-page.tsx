@@ -17,6 +17,7 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { useTheme } from "@/components/theme-provider"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
+import { usePermission } from "@/hooks/use-permission"
 import { deliveryService } from "@/services/delivery.service"
 import { DeliveryDialog } from "@/pages/sales/delivery-dialog"
 import { InvoiceDialog } from "@/pages/sales/invoice-dialog"
@@ -56,6 +57,7 @@ import {
 
 export default function DeliveriesPage() {
   const { resolvedTheme, toggleTheme } = useTheme()
+  const { canDelete } = usePermission()
   const [deliveries, setDeliveries] = useState<Delivery[]>([])
   const [metrics, setMetrics] = useState<DeliveryMetrics>({
     totalDeliveries: 0,
@@ -81,6 +83,7 @@ export default function DeliveriesPage() {
   const [previewItem, setPreviewItem] = useState<Delivery | null>(null)
   const [printItem, setPrintItem] = useState<Delivery | null>(null)
   const [printFormat, setPrintFormat] = useState<"pdf" | "dotmatrix">("pdf")
+  const [dotMatrixSize, setDotMatrixSize] = useState<"half" | "full">("half")
   const [copiedRaw, setCopiedRaw] = useState(false)
 
   const [confirmModal, setConfirmModal] = useState<{
@@ -389,7 +392,7 @@ export default function DeliveriesPage() {
           <title>Surat Jalan - ${printItem.deliveryNo}</title>
           <style>
             @page {
-              size: ${isDotMatrix ? "210mm 140mm" : "A4 portrait"};
+              size: ${isDotMatrix ? (dotMatrixSize === "half" ? "210mm 140mm" : "210mm 280mm") : "A4 portrait"};
               margin: ${isDotMatrix ? "4mm" : "12mm 15mm"};
             }
             body {
@@ -895,15 +898,17 @@ export default function DeliveriesPage() {
                             </Button>
 
                             {/* Delete */}
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              onClick={() => handleDeleteSingle(item.id, item.deliveryNo)}
-                              title="Hapus"
-                              className="cursor-pointer hover:bg-red-500/10 text-red-500 hover:text-red-600 active:scale-95 transition-all"
-                            >
-                              <Trash2Icon className="size-3.5" />
-                            </Button>
+                            {canDelete("deliveries") && (
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => handleDeleteSingle(item.id, item.deliveryNo)}
+                                title="Hapus"
+                                className="cursor-pointer hover:bg-red-500/10 text-red-500 hover:text-red-600 active:scale-95 transition-all"
+                              >
+                                <Trash2Icon className="size-3.5" />
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1209,21 +1214,32 @@ export default function DeliveriesPage() {
             ) : (
               /* Dot Matrix (Continuous Form) Layout Preview */
               <div className="space-y-3">
-                <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-lg text-xs text-emerald-800 dark:text-emerald-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-lg text-xs text-emerald-800 dark:text-emerald-300">
                   <div className="flex items-center gap-2">
                     <PrinterIcon className="size-4 shrink-0 text-emerald-600" />
-                    <span>Format Kertas Rangkap / Continuous Form (Epson LX-310 / Dot Matrix 80-Kolom)</span>
+                    <span>Format Kertas Continuous Form (Dot Matrix 80-Kolom)</span>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={handleCopyRawAscii}
-                    className="h-7 text-xs gap-1.5 cursor-pointer bg-background"
-                  >
-                    {copiedRaw ? <CheckIcon className="size-3 text-emerald-600" /> : <CopyIcon className="size-3" />}
-                    {copiedRaw ? "Tersalin!" : "Salin Raw ASCII"}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300">Ukuran Kertas:</span>
+                    <select
+                      value={dotMatrixSize}
+                      onChange={(e) => setDotMatrixSize(e.target.value as "half" | "full")}
+                      className="h-7 text-xs rounded border border-emerald-600/30 bg-background px-2 text-foreground font-medium"
+                    >
+                      <option value="half">Half-Letter (210×140mm)</option>
+                      <option value="full">Full Page (210×280mm)</option>
+                    </select>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleCopyRawAscii}
+                      className="h-7 text-xs gap-1.5 cursor-pointer bg-background"
+                    >
+                      {copiedRaw ? <CheckIcon className="size-3 text-emerald-600" /> : <CopyIcon className="size-3" />}
+                      {copiedRaw ? "Tersalin!" : "Salin Raw"}
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Simulated Continuous Form Monospace Paper Preview */}

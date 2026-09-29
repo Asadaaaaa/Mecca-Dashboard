@@ -19,6 +19,7 @@ import { useTheme } from "@/components/theme-provider"
 import { productService } from "@/services/product.service"
 import { CategoryDialog } from "@/pages/products/category-dialog"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
+import { usePermission } from "@/hooks/use-permission"
 import type { ProductCategory, ProductCategoryMetrics, ProductCategoryFormData } from "@/types/product.types"
 import {
   SunIcon,
@@ -41,6 +42,7 @@ import {
 
 export default function CategoriesPage() {
   const { resolvedTheme, toggleTheme } = useTheme()
+  const { canDelete } = usePermission()
 
   const [metrics, setMetrics] = useState<ProductCategoryMetrics>({
     total_categories: 0,
@@ -419,14 +421,16 @@ export default function CategoriesPage() {
                           >
                             <Edit2Icon className="size-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-8 text-muted-foreground hover:text-destructive"
-                            onClick={() => handleDelete(cat)}
-                          >
-                            <Trash2Icon className="size-4" />
-                          </Button>
+                          {canDelete("product-categories") && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-8 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleDelete(cat)}
+                            >
+                              <Trash2Icon className="size-4" />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>

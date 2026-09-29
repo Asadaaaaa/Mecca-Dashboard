@@ -16,6 +16,8 @@ import { productService } from "@/services/product.service"
 import type { Customer } from "@/types/customer.types"
 import type { Product } from "@/types/product.types"
 import { Loader2Icon, FileTextIcon, PlusIcon, Trash2Icon } from "lucide-react"
+import { useFormDraft } from "@/hooks/use-form-draft"
+import { DraftBanner } from "@/components/ui/draft-banner"
 
 interface QuotationDialogProps {
   open: boolean
@@ -27,6 +29,14 @@ interface ItemRow {
   product_id: number
   quantity: number
   unit_price: number
+}
+
+interface QuotationDraftData {
+  customerId: number | ""
+  quotationDate: string
+  validUntil: string
+  notes: string
+  items: ItemRow[]
 }
 
 export function QuotationDialog({
@@ -47,6 +57,20 @@ export function QuotationDialog({
   )
   const [notes, setNotes] = useState("")
   const [items, setItems] = useState<ItemRow[]>([])
+
+  const draftData: QuotationDraftData = {
+    customerId,
+    quotationDate,
+    validUntil,
+    notes,
+    items,
+  }
+
+  const { hasDraft, savedAt, getDraft, clearDraft } = useFormDraft<QuotationDraftData>(
+    "create_quotation",
+    draftData,
+    open
+  )
 
   useEffect(() => {
     if (open) {
@@ -103,6 +127,17 @@ export function QuotationDialog({
     return items.reduce((sum, item) => sum + (item.quantity * item.unit_price || 0), 0)
   }
 
+  const handleRestoreDraft = () => {
+    const draft = getDraft()
+    if (draft) {
+      setCustomerId(draft.customerId || "")
+      setQuotationDate(draft.quotationDate || new Date().toISOString().slice(0, 10))
+      setValidUntil(draft.validUntil || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10))
+      setNotes(draft.notes || "")
+      setItems(draft.items || [])
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!customerId) {
@@ -131,6 +166,7 @@ export function QuotationDialog({
           unit_price: Number(it.unit_price),
         })),
       })
+      clearDraft()
       onOpenChange(false)
       onSuccess()
     } catch (err: unknown) {
@@ -157,6 +193,13 @@ export function QuotationDialog({
             </div>
           </div>
         </DialogHeader>
+
+        <DraftBanner
+          hasDraft={hasDraft}
+          savedAt={savedAt}
+          onRestore={handleRestoreDraft}
+          onDiscard={clearDraft}
+        />
 
         {error && (
           <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md text-red-500 text-xs">

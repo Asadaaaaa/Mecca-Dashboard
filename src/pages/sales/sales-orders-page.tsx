@@ -20,6 +20,7 @@ import { ConfirmModal } from "@/components/ui/confirm-modal"
 import { salesOrderService } from "@/services/sales-order.service"
 import { SalesOrderDialog } from "@/pages/sales/sales-order-dialog"
 import { DeliveryDialog } from "@/pages/sales/delivery-dialog"
+import { usePermission } from "@/hooks/use-permission"
 import type { SalesOrder, SalesOrderMetrics } from "@/types/sales-order.types"
 import {
   SunIcon,
@@ -57,6 +58,7 @@ function formatRupiah(amount: number) {
 
 export default function SalesOrdersPage() {
   const { resolvedTheme, toggleTheme } = useTheme()
+  const { canDelete } = usePermission()
   const [orders, setOrders] = useState<SalesOrder[]>([])
   const [metrics, setMetrics] = useState<SalesOrderMetrics>({
     totalOrders: 0,
@@ -498,15 +500,17 @@ export default function SalesOrdersPage() {
                             )}
 
                             {/* Delete */}
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              onClick={() => handleDeleteSingle(item.id, item.orderNo)}
-                              title="Hapus"
-                              className="cursor-pointer hover:bg-red-500/10 text-red-500 hover:text-red-600 active:scale-95 transition-all"
-                            >
-                              <Trash2Icon className="size-3.5" />
-                            </Button>
+                            {canDelete("sales-orders") && (
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() => handleDeleteSingle(item.id, item.orderNo)}
+                                title="Hapus"
+                                className="cursor-pointer hover:bg-red-500/10 text-red-500 hover:text-red-600 active:scale-95 transition-all"
+                              >
+                                <Trash2Icon className="size-3.5" />
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>

@@ -1,6 +1,8 @@
 export interface DeliveryItemDetail {
   id?: number
   delivery_id?: number
+  sales_order_id?: number
+  sales_order_number?: string
   sales_order_item_id?: number
   product_id: number
   productCode?: string
@@ -22,6 +24,7 @@ export interface Delivery {
   delivery_number?: string
   refOrder: string
   sales_order_id: number
+  sales_orders?: Array<{ id: number; sales_order_number: string }>
   date: string
   customer_id: number
   customerName?: string
@@ -74,13 +77,15 @@ export interface DeliveryListResponse {
 }
 
 export interface DeliveryFormData {
-  sales_order_id: number
+  sales_order_id?: number
+  sales_order_ids?: number[]
   warehouse_id?: number
   delivery_date?: string
   courier_fleet?: string
   tracking_number?: string
   notes?: string
   items: {
+    sales_order_id?: number
     sales_order_item_id?: number
     product_id?: number
     quantity: number

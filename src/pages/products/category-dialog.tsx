@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { ProductCategory, ProductCategoryFormData } from "@/types/product.types"
 import { Loader2Icon, LayersIcon, AlertCircleIcon } from "lucide-react"
+import { useFormDraft } from "@/hooks/use-form-draft"
+import { DraftBanner } from "@/components/ui/draft-banner"
 
 interface CategoryDialogProps {
   open: boolean
@@ -36,6 +38,12 @@ export function CategoryDialog({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const { hasDraft, savedAt, getDraft, clearDraft } = useFormDraft<ProductCategoryFormData>(
+    "create_category",
+    formData,
+    open && !isEdit
+  )
+
   useEffect(() => {
     if (category) {
       setFormData({
@@ -55,6 +63,13 @@ export function CategoryDialog({
     setError(null)
   }, [category, open])
 
+  const handleRestoreDraft = () => {
+    const draft = getDraft()
+    if (draft) {
+      setFormData(draft)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.name.trim()) {
@@ -66,6 +81,9 @@ export function CategoryDialog({
     setError(null)
     try {
       await onSave(formData)
+      if (!isEdit) {
+        clearDraft()
+      }
       onOpenChange(false)
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } }; message?: string }
@@ -94,6 +112,13 @@ export function CategoryDialog({
           </div>
         </DialogHeader>
 
+        <DraftBanner
+          hasDraft={hasDraft}
+          savedAt={savedAt}
+          onRestore={handleRestoreDraft}
+          onDiscard={clearDraft}
+        />
+
         {error && (
           <div className="flex items-start gap-2.5 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive font-medium my-2">
             <AlertCircleIcon className="size-4 shrink-0 mt-0.5" />
@@ -110,7 +135,7 @@ export function CategoryDialog({
                 </Label>
                 <Input
                   id="cat-code"
-                  placeholder="Otomatis (misal CAT-001)"
+                  placeholder="Kosongkan utk auto-generate"
                   value={formData.code}
                   onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                   className="h-9 text-sm font-mono"

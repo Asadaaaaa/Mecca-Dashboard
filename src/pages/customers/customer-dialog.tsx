@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label"
 import { customerService } from "@/services/customer.service"
 import type { Customer, CustomerFormData } from "@/types/customer.types"
 import { Loader2Icon, UsersIcon, AlertCircleIcon } from "lucide-react"
+import { useFormDraft } from "@/hooks/use-form-draft"
+import { DraftBanner } from "@/components/ui/draft-banner"
 
 interface CustomerDialogProps {
   open: boolean
@@ -39,6 +41,12 @@ export function CustomerDialog({
     address: "",
   })
 
+  const { hasDraft, savedAt, getDraft, clearDraft } = useFormDraft<CustomerFormData>(
+    "create_customer",
+    formData,
+    open && !isEdit
+  )
+
   useEffect(() => {
     if (customer) {
       setFormData({
@@ -60,6 +68,13 @@ export function CustomerDialog({
     setError(null)
   }, [customer, open])
 
+  const handleRestoreDraft = () => {
+    const draft = getDraft()
+    if (draft) {
+      setFormData(draft)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.name.trim()) {
@@ -75,6 +90,7 @@ export function CustomerDialog({
         await customerService.updateCustomer(customer.id, formData)
       } else {
         await customerService.createCustomer(formData)
+        clearDraft()
       }
       onOpenChange(false)
       onSuccess()
@@ -104,6 +120,13 @@ export function CustomerDialog({
             </div>
           </div>
         </DialogHeader>
+
+        <DraftBanner
+          hasDraft={hasDraft}
+          savedAt={savedAt}
+          onRestore={handleRestoreDraft}
+          onDiscard={clearDraft}
+        />
 
         {error && (
           <div className="flex items-start gap-2.5 rounded-xl bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive font-medium my-2">
