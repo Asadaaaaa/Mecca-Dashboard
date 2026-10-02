@@ -80,7 +80,10 @@ export function CategoryDialog({
     setLoading(true)
     setError(null)
     try {
-      await onSave(formData)
+      await onSave({
+        ...formData,
+        code: formData.code?.trim() || undefined,
+      })
       if (!isEdit) {
         clearDraft()
       }
@@ -135,7 +138,7 @@ export function CategoryDialog({
                 </Label>
                 <Input
                   id="cat-code"
-                  placeholder="Kosongkan utk auto-generate"
+                  placeholder="Contoh: CAT-001 (kosongkan jika otomatis)"
                   value={formData.code}
                   onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                   className="h-9 text-sm font-mono"

@@ -208,7 +208,7 @@ export function ProductDialog({
                 </Label>
                 <Input
                   id="prd-code"
-                  placeholder="Otomatis (kosongkan untuk generate)"
+                  placeholder="Contoh: PRD-001 (kosongkan jika otomatis)"
                   value={formData.code}
                   onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                   className="h-9 text-sm font-mono"
