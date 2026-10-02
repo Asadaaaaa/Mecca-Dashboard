@@ -18,7 +18,7 @@ import type {
   Unit,
   Tax,
 } from "@/types/product.types"
-import { Loader2Icon, PackageIcon, AlertCircleIcon, Sparkles } from "lucide-react"
+import { Loader2Icon, PackageIcon, AlertCircleIcon } from "lucide-react"
 import { useFormDraft } from "@/hooks/use-form-draft"
 import { DraftBanner } from "@/components/ui/draft-banner"
 
@@ -52,7 +52,6 @@ export function ProductDialog({
   const [units, setUnits] = useState<Unit[]>([])
   const [taxes, setTaxes] = useState<Tax[]>([])
   const [loading, setLoading] = useState(false)
-  const [generatingSku, setGeneratingSku] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const { hasDraft, savedAt, getDraft, clearDraft } = useFormDraft<ProductFormData>(
@@ -123,19 +122,6 @@ export function ProductDialog({
     }
   }
 
-  const handleGenerateSku = async () => {
-    try {
-      setGeneratingSku(true)
-      const sku = await productService.generateSku()
-      if (sku) {
-        setFormData((prev) => ({ ...prev, code: sku }))
-      }
-    } catch (err) {
-      console.error("Failed to generate SKU:", err)
-    } finally {
-      setGeneratingSku(false)
-    }
-  }
 
   const handleRestoreDraft = () => {
     const draft = getDraft()
@@ -161,6 +147,7 @@ export function ProductDialog({
     try {
       await onSave({
         ...formData,
+        code: formData.code?.trim() || undefined,
         category_id: formData.category_id ? Number(formData.category_id) : null,
         unit_id: Number(formData.unit_id),
         cost_price: Number(formData.cost_price) || 0,
@@ -219,31 +206,13 @@ export function ProductDialog({
                 <Label htmlFor="prd-code" className="text-xs font-semibold">
                   Kode / SKU Produk
                 </Label>
-                <div className="flex gap-1.5">
-                  <Input
-                    id="prd-code"
-                    placeholder="Manual / klik Generate"
-                    value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                    className="h-9 text-sm font-mono flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleGenerateSku}
-                    disabled={generatingSku}
-                    className="h-9 px-2.5 text-xs text-muted-foreground hover:text-foreground shrink-0"
-                    title="Generate SKU Otomatis"
-                  >
-                    {generatingSku ? (
-                      <Loader2Icon className="size-3.5 animate-spin" />
-                    ) : (
-                      <Sparkles className="size-3.5 mr-1 text-primary" />
-                    )}
-                    Generate
-                  </Button>
-                </div>
+                <Input
+                  id="prd-code"
+                  placeholder="Otomatis (kosongkan untuk generate)"
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  className="h-9 text-sm font-mono"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="prd-status" className="text-xs font-semibold">
