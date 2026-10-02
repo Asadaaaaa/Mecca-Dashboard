@@ -104,7 +104,19 @@ export function ProductDialog({
         productService.getTaxes(),
       ])
       setCategories(catsRes.items || [])
-      setUnits(unitsRes || [])
+      // Restrict units strictly to PCS and BOX
+      const allowedUnits = (unitsRes || []).filter((u: Unit) => {
+        const code = (u.code || "").toUpperCase()
+        return code === "PCS" || code === "BOX" || code === "BOKS"
+      })
+      setUnits(
+        allowedUnits.length > 0
+          ? allowedUnits
+          : [
+              { id: 1, code: "PCS", name: "Pieces / Satuan", status: "active" },
+              { id: 2, code: "BOX", name: "Box / Kotak", status: "active" },
+            ]
+      )
       setTaxes(taxesRes || [])
     } catch (err) {
       console.error("Failed to load product dependencies:", err)

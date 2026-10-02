@@ -49,6 +49,9 @@ export interface SalesOrder {
   totalDeliveredQty?: number
   status: "Draf" | "Dikonfirmasi" | "Siap Kirim" | "Proses Kirim" | "Selesai Dikirim" | "Dibatalkan"
   notes?: string
+  recipient_name?: string
+  recipient_phone?: string
+  shipping_address?: string
   creator?: string
   items?: SalesOrderItemDetail[]
   created_at?: string
@@ -87,6 +90,9 @@ export interface SalesOrderFormData {
   warehouse_id?: number
   quotation_id?: number
   order_date?: string
+  recipient_name?: string
+  recipient_phone?: string
+  shipping_address?: string
   notes?: string
   discount_amount?: number
   tax_amount?: number

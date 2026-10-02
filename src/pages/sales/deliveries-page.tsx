@@ -180,7 +180,11 @@ export default function DeliveriesPage() {
     })
   }
 
-  const handleDeleteSingle = (id: number, no: string) => {
+  const handleDeleteSingle = (id: number, no: string, status?: string) => {
+    if (status && status !== "Siap Muat") {
+      setErrorFeedback("Surat jalan yang sudah diproses kirim atau diterima tidak dapat dirubah atau dihapus.")
+      return
+    }
     setConfirmModal({
       open: true,
       title: "Hapus Surat Jalan",
@@ -191,9 +195,11 @@ export default function DeliveriesPage() {
         try {
           await deliveryService.deleteDelivery(id)
           setFeedback(`Surat Jalan ${no} berhasil dihapus.`)
+          setErrorFeedback(null)
           fetchData()
-        } catch {
-          setErrorFeedback("Gagal menghapus surat jalan.")
+        } catch (err: unknown) {
+          const e = err as { response?: { data?: { message?: string } }; message?: string }
+          setErrorFeedback(e.response?.data?.message || e.message || "Gagal menghapus surat jalan.")
         }
       },
     })
@@ -897,14 +903,19 @@ export default function DeliveriesPage() {
                               <FileTextIcon className="size-3.5" />
                             </Button>
 
-                            {/* Delete */}
+                            {/* Delete - Status tidak bisa dirubah / dihapus setelah diproses kirim */}
                             {canDelete("deliveries") && (
                               <Button
                                 variant="ghost"
                                 size="icon-sm"
-                                onClick={() => handleDeleteSingle(item.id, item.deliveryNo)}
-                                title="Hapus"
-                                className="cursor-pointer hover:bg-red-500/10 text-red-500 hover:text-red-600 active:scale-95 transition-all"
+                                disabled={item.status !== "Siap Muat"}
+                                onClick={() => handleDeleteSingle(item.id, item.deliveryNo, item.status)}
+                                title={item.status !== "Siap Muat" ? "Status terkunci: Tidak dapat dihapus setelah diproses kirim" : "Hapus"}
+                                className={
+                                  item.status !== "Siap Muat"
+                                    ? "opacity-30 cursor-not-allowed text-muted-foreground"
+                                    : "cursor-pointer hover:bg-red-500/10 text-red-500 hover:text-red-600 active:scale-95 transition-all"
+                                }
                               >
                                 <Trash2Icon className="size-3.5" />
                               </Button>
