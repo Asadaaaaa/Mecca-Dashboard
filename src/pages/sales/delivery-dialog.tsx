@@ -13,7 +13,8 @@ import { Label } from "@/components/ui/label"
 import { deliveryService } from "@/services/delivery.service"
 import { salesOrderService } from "@/services/sales-order.service"
 import type { SalesOrder } from "@/types/sales-order.types"
-import { Loader2Icon, TruckIcon, ShieldAlertIcon, CheckSquare, Square } from "lucide-react"
+import type { DeliverySigner } from "@/types/delivery.types"
+import { Loader2Icon, TruckIcon, ShieldAlertIcon, CheckSquare, Square, PlusIcon, Trash2Icon, PenLineIcon } from "lucide-react"
 import { useFormDraft } from "@/hooks/use-form-draft"
 import { DraftBanner } from "@/components/ui/draft-banner"
 
@@ -44,6 +45,9 @@ interface DeliveryDraftData {
   courierFleet: string
   trackingNumber: string
   notes: string
+  signatureCity: string
+  signatureDate: string
+  signers: DeliverySigner[]
   items: DeliveryItemRow[]
 }
 
@@ -64,6 +68,13 @@ export function DeliveryDialog({
   const [courierFleet, setCourierFleet] = useState("")
   const [trackingNumber, setTrackingNumber] = useState("")
   const [notes, setNotes] = useState("")
+  const [signatureCity, setSignatureCity] = useState("Jakarta")
+  const [signatureDate, setSignatureDate] = useState(new Date().toISOString().slice(0, 10))
+  const [signers, setSigners] = useState<DeliverySigner[]>([
+    { title: "Tanda Terima (Pelanggan)", name: "" },
+    { title: "Pengemudi / Kurir", name: "" },
+    { title: "Petugas Gudang", name: "" },
+  ])
   const [items, setItems] = useState<DeliveryItemRow[]>([])
 
   const draftData: DeliveryDraftData = {
@@ -72,6 +83,9 @@ export function DeliveryDialog({
     courierFleet,
     trackingNumber,
     notes,
+    signatureCity,
+    signatureDate,
+    signers,
     items,
   }
 
@@ -84,10 +98,18 @@ export function DeliveryDialog({
   useEffect(() => {
     if (open) {
       setError(null)
-      setDeliveryDate(new Date().toISOString().slice(0, 10))
+      const today = new Date().toISOString().slice(0, 10)
+      setDeliveryDate(today)
       setCourierFleet("")
       setTrackingNumber("")
       setNotes("")
+      setSignatureCity("Jakarta")
+      setSignatureDate(today)
+      setSigners([
+        { title: "Tanda Terima (Pelanggan)", name: "" },
+        { title: "Pengemudi / Kurir", name: "" },
+        { title: "Petugas Gudang", name: "" },
+      ])
       setItems([])
       setSelectedSoIds([])
 
@@ -121,8 +143,28 @@ export function DeliveryDialog({
       setCourierFleet(draft.courierFleet || "")
       setTrackingNumber(draft.trackingNumber || "")
       setNotes(draft.notes || "")
+      if (draft.signatureCity) setSignatureCity(draft.signatureCity)
+      if (draft.signatureDate) setSignatureDate(draft.signatureDate)
+      if (draft.signers && draft.signers.length > 0) setSigners(draft.signers)
       setItems(draft.items || [])
     }
+  }
+
+  const handleAddSigner = () => {
+    setSigners((prev) => [...prev, { title: "", name: "" }])
+  }
+
+  const handleRemoveSigner = (index: number) => {
+    if (signers.length <= 1) return
+    setSigners((prev) => prev.filter((_, idx) => idx !== index))
+  }
+
+  const handleUpdateSigner = (index: number, field: "title" | "name", value: string) => {
+    setSigners((prev) => {
+      const next = [...prev]
+      next[index] = { ...next[index], [field]: value }
+      return next
+    })
   }
 
   // Identify active customer and warehouse from selected SOs
@@ -274,6 +316,9 @@ export function DeliveryDialog({
         courier_fleet: courierFleet || undefined,
         tracking_number: trackingNumber || undefined,
         notes: notes || undefined,
+        signature_city: signatureCity.trim() || "Jakarta",
+        signature_date: signatureDate || deliveryDate,
+        signatures: signers.filter((s) => s.title.trim().length > 0),
         items: validItems.map((it) => ({
           sales_order_id: it.sales_order_id,
           sales_order_item_id: it.sales_order_item_id,
@@ -533,6 +578,96 @@ export function DeliveryDialog({
               <span>
                 <strong>Restriksi Mutlak Anti-Minus:</strong> Surat Jalan memotong stok fisik riil gudang. Pengiriman tidak dapat melebihi stok fisik yang tersedia dan tidak dapat di-bypass.
               </span>
+            </div>
+          </div>
+
+          {/* Kolom Tanda Tangan Dinamis */}
+          <div className="space-y-3 pt-3 border-t">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <PenLineIcon className="size-3.5 text-primary" />
+                  Pengaturan Tanda Tangan Surat Jalan
+                </Label>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Sesuaikan kota, tanggal, serta daftar penandatangan (2 orang = kiri & kanan, 3 orang = kiri, tengah, kanan, dst).
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddSigner}
+                className="h-7 text-xs gap-1 cursor-pointer"
+              >
+                <PlusIcon className="size-3" />
+                Tambah Orang
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-muted/20 p-2.5 rounded-lg border border-border/60">
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Kota Tanda Tangan</Label>
+                <Input
+                  placeholder="Contoh: Jakarta"
+                  value={signatureCity}
+                  onChange={(e) => setSignatureCity(e.target.value)}
+                  className="text-xs h-8"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Tanggal Tanda Tangan</Label>
+                <Input
+                  type="date"
+                  value={signatureDate}
+                  onChange={(e) => setSignatureDate(e.target.value)}
+                  className="text-xs h-8"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground">
+                Daftar Penandatangan ({signers.length} Orang)
+              </Label>
+              <div className="space-y-2">
+                {signers.map((signer, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 bg-muted/30 p-2 rounded-md border border-border/50 text-xs"
+                  >
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+                      #{idx + 1}
+                    </span>
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <Input
+                        placeholder="Peran / Jabatan (Contoh: Petugas Gudang / Driver / Pelanggan)"
+                        value={signer.title}
+                        onChange={(e) => handleUpdateSigner(idx, "title", e.target.value)}
+                        className="text-xs h-8"
+                        required
+                      />
+                      <Input
+                        placeholder="Nama Lengkap (Opsional - biarkan kosong jika manual)"
+                        value={signer.name || ""}
+                        onChange={(e) => handleUpdateSigner(idx, "name", e.target.value)}
+                        className="text-xs h-8"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => handleRemoveSigner(idx)}
+                      disabled={signers.length <= 1}
+                      title={signers.length <= 1 ? "Minimal 1 penandatangan" : "Hapus penandatangan"}
+                      className="cursor-pointer text-muted-foreground hover:text-red-500 hover:bg-red-500/10 shrink-0"
+                    >
+                      <Trash2Icon className="size-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

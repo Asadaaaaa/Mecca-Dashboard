@@ -58,6 +58,8 @@ import {
   generateDeliveryDotMatrixHtml,
   printDotMatrixHtml,
   DotMatrixPreview,
+  getDeliverySigners,
+  formatDotMatrixDateOnly,
 } from "@/lib/dot-matrix-print"
 
 
@@ -311,7 +313,96 @@ export default function DeliveriesPage() {
         )
         .join("")
 
-      const contentHtml = `
+    const pdfSigners = getDeliverySigners(printItem)
+    const pdfCity = printItem.signature_city || "Jakarta"
+    const pdfDate = formatDotMatrixDateOnly(printItem.signature_date || printItem.date || new Date())
+    const pdfRightHeader = `${pdfCity}, ${pdfDate}`
+
+    let pdfSignaturesHtml = ""
+    if (pdfSigners.length === 1) {
+      const s = pdfSigners[0]
+      pdfSignaturesHtml = `
+        <table style="width: 100%; margin-top: 20px; margin-bottom: 16px; border-collapse: collapse;">
+          <tr>
+            <td style="width: 50%; text-align: center; vertical-align: top; margin: 0 auto; display: block;">
+              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">${pdfRightHeader}</div>
+              <div style="font-size: 11px; font-weight: 600; color: #475569;">${s.title}</div>
+              <div style="height: 50px;"></div>
+              <div style="font-size: 11px; font-weight: 600; color: #1e293b; border-top: 1px solid #cbd5e1; margin: 0 25px; padding-top: 4px;">( ${s.name || "....................................."} )</div>
+            </td>
+          </tr>
+        </table>
+      `
+    } else if (pdfSigners.length === 2) {
+      const s1 = pdfSigners[0]
+      const s2 = pdfSigners[1]
+      pdfSignaturesHtml = `
+        <table style="width: 100%; margin-top: 20px; margin-bottom: 16px; border-collapse: collapse;">
+          <tr>
+            <td style="width: 38%; text-align: center; vertical-align: top;">
+              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">&nbsp;</div>
+              <div style="font-size: 11px; font-weight: 600; color: #475569;">${s1.title}</div>
+              <div style="height: 50px;"></div>
+              <div style="font-size: 11px; font-weight: 600; color: #1e293b; border-top: 1px solid #cbd5e1; margin: 0 15px; padding-top: 4px;">( ${s1.name || "....................................."} )</div>
+            </td>
+            <td style="width: 24%;">&nbsp;</td>
+            <td style="width: 38%; text-align: center; vertical-align: top;">
+              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">${pdfRightHeader}</div>
+              <div style="font-size: 11px; font-weight: 600; color: #475569;">${s2.title}</div>
+              <div style="height: 50px;"></div>
+              <div style="font-size: 11px; font-weight: 600; color: #1e293b; border-top: 1px solid #cbd5e1; margin: 0 15px; padding-top: 4px;">( ${s2.name || "....................................."} )</div>
+            </td>
+          </tr>
+        </table>
+      `
+    } else if (pdfSigners.length === 3) {
+      pdfSignaturesHtml = `
+        <table style="width: 100%; margin-top: 20px; margin-bottom: 16px; border-collapse: collapse;">
+          <tr>
+            <td style="width: 33.33%; text-align: center; vertical-align: top;">
+              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">&nbsp;</div>
+              <div style="font-size: 11px; font-weight: 600; color: #475569;">${pdfSigners[0].title}</div>
+              <div style="height: 50px;"></div>
+              <div style="font-size: 11px; font-weight: 600; color: #1e293b; border-top: 1px solid #cbd5e1; margin: 0 15px; padding-top: 4px;">( ${pdfSigners[0].name || "....................................."} )</div>
+            </td>
+            <td style="width: 33.33%; text-align: center; vertical-align: top;">
+              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">&nbsp;</div>
+              <div style="font-size: 11px; font-weight: 600; color: #475569;">${pdfSigners[1].title}</div>
+              <div style="height: 50px;"></div>
+              <div style="font-size: 11px; font-weight: 600; color: #1e293b; border-top: 1px solid #cbd5e1; margin: 0 15px; padding-top: 4px;">( ${pdfSigners[1].name || "....................................."} )</div>
+            </td>
+            <td style="width: 33.33%; text-align: center; vertical-align: top;">
+              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">${pdfRightHeader}</div>
+              <div style="font-size: 11px; font-weight: 600; color: #475569;">${pdfSigners[2].title}</div>
+              <div style="height: 50px;"></div>
+              <div style="font-size: 11px; font-weight: 600; color: #1e293b; border-top: 1px solid #cbd5e1; margin: 0 15px; padding-top: 4px;">( ${pdfSigners[2].name || "....................................."} )</div>
+            </td>
+          </tr>
+        </table>
+      `
+    } else {
+      const colW = (100 / pdfSigners.length).toFixed(2)
+      const cells = pdfSigners
+        .map((s, idx) => {
+          const isRight = idx === pdfSigners.length - 1
+          return `
+            <td style="width: ${colW}%; text-align: center; vertical-align: top;">
+              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">${isRight ? pdfRightHeader : "&nbsp;"}</div>
+              <div style="font-size: 11px; font-weight: 600; color: #475569;">${s.title}</div>
+              <div style="height: 50px;"></div>
+              <div style="font-size: 11px; font-weight: 600; color: #1e293b; border-top: 1px solid #cbd5e1; margin: 0 10px; padding-top: 4px;">( ${s.name || "....................................."} )</div>
+            </td>
+          `
+        })
+        .join("")
+      pdfSignaturesHtml = `
+        <table style="width: 100%; margin-top: 20px; margin-bottom: 16px; border-collapse: collapse;">
+          <tr>${cells}</tr>
+        </table>
+      `
+    }
+
+    const contentHtml = `
         <div class="pdf-container">
           <div class="header">
             <div>
@@ -368,23 +459,7 @@ export default function DeliveriesPage() {
 
           ${printItem.notes ? `<div class="notes"><strong>Catatan Khusus:</strong> ${printItem.notes}</div>` : ""}
 
-          <div class="signatures">
-            <div class="sig-col">
-              <div class="sig-title">Diserahkan Oleh,</div>
-              <div class="sig-role">Petugas Gudang</div>
-              <div class="sig-line">( ..................................... )</div>
-            </div>
-            <div class="sig-col">
-              <div class="sig-title">Dibawa / Diantar Oleh,</div>
-              <div class="sig-role">Pengemudi / Kurir</div>
-              <div class="sig-line">( ..................................... )</div>
-            </div>
-            <div class="sig-col">
-              <div class="sig-title">Diterima Dengan Baik,</div>
-              <div class="sig-role">Penerima / Cap Toko</div>
-              <div class="sig-line">( ..................................... )</div>
-            </div>
-          </div>
+          ${pdfSignaturesHtml}
 
           <div class="footer-note">
             <span>* Lembar 1 (Putih): Pelanggan</span>
@@ -1206,20 +1281,89 @@ export default function DeliveriesPage() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-3 gap-2 pt-4 text-center text-xs">
-                  <div>
-                    <div className="text-slate-500 mb-9 text-[11px]">Diserahkan Oleh,</div>
-                    <div className="border-t border-slate-400 mx-3 pt-1 text-slate-700 font-medium">( Petugas Gudang )</div>
-                  </div>
-                  <div>
-                    <div className="text-slate-500 mb-9 text-[11px]">Pengemudi / Kurir,</div>
-                    <div className="border-t border-slate-400 mx-3 pt-1 text-slate-700 font-medium">( ........................ )</div>
-                  </div>
-                  <div>
-                    <div className="text-slate-500 mb-9 text-[11px]">Diterima Dengan Baik,</div>
-                    <div className="border-t border-slate-400 mx-3 pt-1 text-slate-700 font-medium">( Penerima / Cap )</div>
-                  </div>
-                </div>
+                {(() => {
+                  const sList = getDeliverySigners(printItem)
+                  const pCity = printItem.signature_city || "Jakarta"
+                  const pDate = formatDotMatrixDateOnly(printItem.signature_date || printItem.date)
+                  const rightHeader = `${pCity}, ${pDate}`
+
+                  if (sList.length === 1) {
+                    return (
+                      <div className="flex justify-center pt-4 text-center text-xs">
+                        <div className="w-[50%]">
+                          <div className="text-[10px] text-slate-500 mb-1">{rightHeader}</div>
+                          <div className="text-slate-600 font-medium text-[11px]">{sList[0].title}</div>
+                          <div className="h-12"></div>
+                          <div className="border-t border-slate-400 mx-4 pt-1 text-slate-700 font-semibold">
+                            ( {sList[0].name || "........................"} )
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  if (sList.length === 2) {
+                    return (
+                      <div className="flex justify-between pt-4 text-center text-xs">
+                        <div className="w-[42%]">
+                          <div className="text-[10px] text-slate-500 mb-1">&nbsp;</div>
+                          <div className="text-slate-600 font-medium text-[11px]">{sList[0].title}</div>
+                          <div className="h-12"></div>
+                          <div className="border-t border-slate-400 mx-4 pt-1 text-slate-700 font-semibold">
+                            ( {sList[0].name || "........................"} )
+                          </div>
+                        </div>
+                        <div className="w-[42%]">
+                          <div className="text-[10px] text-slate-500 mb-1">{rightHeader}</div>
+                          <div className="text-slate-600 font-medium text-[11px]">{sList[1].title}</div>
+                          <div className="h-12"></div>
+                          <div className="border-t border-slate-400 mx-4 pt-1 text-slate-700 font-semibold">
+                            ( {sList[1].name || "........................"} )
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  if (sList.length === 3) {
+                    return (
+                      <div className="grid grid-cols-3 gap-2 pt-4 text-center text-xs">
+                        {sList.map((s, idx) => (
+                          <div key={idx}>
+                            <div className="text-[10px] text-slate-500 mb-1">
+                              {idx === sList.length - 1 ? rightHeader : "\u00A0"}
+                            </div>
+                            <div className="text-slate-600 font-medium text-[11px]">{s.title}</div>
+                            <div className="h-12"></div>
+                            <div className="border-t border-slate-400 mx-3 pt-1 text-slate-700 font-semibold">
+                              ( {s.name || "........................"} )
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div
+                      className="grid gap-2 pt-4 text-center text-xs"
+                      style={{ gridTemplateColumns: `repeat(${sList.length}, minmax(0, 1fr))` }}
+                    >
+                      {sList.map((s, idx) => (
+                        <div key={idx}>
+                          <div className="text-[10px] text-slate-500 mb-1">
+                            {idx === sList.length - 1 ? rightHeader : "\u00A0"}
+                          </div>
+                          <div className="text-slate-600 font-medium text-[11px]">{s.title}</div>
+                          <div className="h-12"></div>
+                          <div className="border-t border-slate-400 mx-2 pt-1 text-slate-700 font-semibold">
+                            ( {s.name || "........................"} )
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
 
                 <div className="border-t pt-2 flex justify-between text-[10px] text-slate-400">
                   <span>* Lembar 1: Putih (Pelanggan)</span>

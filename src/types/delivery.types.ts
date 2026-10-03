@@ -18,6 +18,11 @@ export interface DeliveryItemDetail {
   so_delivered_quantity?: number
 }
 
+export interface DeliverySigner {
+  title: string
+  name?: string
+}
+
 export interface Delivery {
   id: number
   deliveryNo: string
@@ -31,6 +36,8 @@ export interface Delivery {
   customer?: {
     id?: number
     name?: string
+    address?: string
+    phone?: string
   }
   warehouse_id?: number
   warehouse?: string | {
@@ -43,6 +50,10 @@ export interface Delivery {
   totalItems: number
   status: "Siap Muat" | "Dalam Perjalanan" | "Diterima" | "Kendala Pengiriman"
   notes?: string
+  signature_city?: string
+  signature_date?: string
+  signatures?: DeliverySigner[]
+  signatures_data?: string
   creator?: string
   items?: DeliveryItemDetail[]
   created_at?: string
@@ -84,6 +95,10 @@ export interface DeliveryFormData {
   courier_fleet?: string
   tracking_number?: string
   notes?: string
+  signature_city?: string
+  signature_date?: string
+  signatures?: DeliverySigner[]
+  signatures_data?: string
   items: {
     sales_order_id?: number
     sales_order_item_id?: number
@@ -91,3 +106,4 @@ export interface DeliveryFormData {
     quantity: number
   }[]
 }
+
