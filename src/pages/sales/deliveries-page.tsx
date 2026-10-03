@@ -54,6 +54,12 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
+import {
+  generateDeliveryDotMatrixHtml,
+  printDotMatrixHtml,
+  DotMatrixPreview,
+} from "@/lib/dot-matrix-print"
+
 
 export default function DeliveriesPage() {
   const { resolvedTheme, toggleTheme } = useTheme()
@@ -82,9 +88,9 @@ export default function DeliveriesPage() {
   const [selectedDeliveryForInvoice, setSelectedDeliveryForInvoice] = useState<number | null>(null)
   const [previewItem, setPreviewItem] = useState<Delivery | null>(null)
   const [printItem, setPrintItem] = useState<Delivery | null>(null)
-  const [printFormat, setPrintFormat] = useState<"pdf" | "dotmatrix">("pdf")
-  const [dotMatrixSize, setDotMatrixSize] = useState<"half" | "full">("half")
+  const [printFormat, setPrintFormat] = useState<"pdf" | "dotmatrix">("dotmatrix")
   const [copiedRaw, setCopiedRaw] = useState(false)
+
 
   const [confirmModal, setConfirmModal] = useState<{
     open: boolean
@@ -282,17 +288,16 @@ export default function DeliveriesPage() {
         ? (printItem.warehouse as { name?: string })?.name || "Gudang Utama"
         : printItem.warehouse || "Gudang Utama"
 
-    let contentHtml = ""
-
     if (isDotMatrix) {
-      const rawText = generateDotMatrixRawText(printItem)
-      contentHtml = `
-        <div class="dot-matrix-container">
-          <pre class="dot-matrix-text">${rawText}</pre>
-        </div>
-      `
-    } else {
-      const itemsRows = (printItem.items || [])
+      printDotMatrixHtml(
+        generateDeliveryDotMatrixHtml(printItem),
+        `Surat Jalan - ${printItem.deliveryNo}`
+      )
+      return
+    }
+
+    const itemsRows = (printItem.items || [])
+
         .map(
           (it, idx) => `
           <tr>
@@ -306,7 +311,7 @@ export default function DeliveriesPage() {
         )
         .join("")
 
-      contentHtml = `
+      const contentHtml = `
         <div class="pdf-container">
           <div class="header">
             <div>
@@ -388,7 +393,6 @@ export default function DeliveriesPage() {
           </div>
         </div>
       `
-    }
 
     doc.open()
     doc.write(`
@@ -398,9 +402,10 @@ export default function DeliveriesPage() {
           <title>Surat Jalan - ${printItem.deliveryNo}</title>
           <style>
             @page {
-              size: ${isDotMatrix ? (dotMatrixSize === "half" ? "210mm 140mm" : "210mm 280mm") : "A4 portrait"};
-              margin: ${isDotMatrix ? "4mm" : "12mm 15mm"};
+              size: A4 portrait;
+              margin: 12mm 15mm;
             }
+
             body {
               margin: 0;
               padding: 0;
@@ -1228,18 +1233,9 @@ export default function DeliveriesPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-lg text-xs text-emerald-800 dark:text-emerald-300">
                   <div className="flex items-center gap-2">
                     <PrinterIcon className="size-4 shrink-0 text-emerald-600" />
-                    <span>Format Kertas Continuous Form (Dot Matrix 80-Kolom)</span>
+                    <span>Format Continuous Form Dot Matrix (Epson LX/LQ Series 11" x 8.5")</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300">Ukuran Kertas:</span>
-                    <select
-                      value={dotMatrixSize}
-                      onChange={(e) => setDotMatrixSize(e.target.value as "half" | "full")}
-                      className="h-7 text-xs rounded border border-emerald-600/30 bg-background px-2 text-foreground font-medium"
-                    >
-                      <option value="half">Half-Letter (210×140mm)</option>
-                      <option value="full">Full Page (210×280mm)</option>
-                    </select>
                     <Button
                       type="button"
                       size="sm"
@@ -1248,17 +1244,13 @@ export default function DeliveriesPage() {
                       className="h-7 text-xs gap-1.5 cursor-pointer bg-background"
                     >
                       {copiedRaw ? <CheckIcon className="size-3 text-emerald-600" /> : <CopyIcon className="size-3" />}
-                      {copiedRaw ? "Tersalin!" : "Salin Raw"}
+                      {copiedRaw ? "Tersalin!" : "Salin Raw ASCII"}
                     </Button>
                   </div>
                 </div>
 
                 {/* Simulated Continuous Form Monospace Paper Preview */}
-                <div className="relative rounded-lg border-2 border-slate-300 bg-[#f7faf4] text-slate-800 p-4 font-mono text-xs overflow-x-auto shadow-inner dark:bg-slate-950 dark:text-emerald-400 dark:border-slate-800">
-                  <pre className="font-mono text-xs leading-relaxed select-all whitespace-pre m-0">
-                    {generateDotMatrixRawText(printItem)}
-                  </pre>
-                </div>
+                <DotMatrixPreview html={generateDeliveryDotMatrixHtml(printItem)} />
               </div>
             )}
 

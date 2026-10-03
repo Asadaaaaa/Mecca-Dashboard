@@ -44,6 +44,7 @@ import {
   AlertTriangleIcon,
   Building2Icon,
   CreditCardIcon,
+  FileTextIcon,
 } from "lucide-react"
 import {
   Dialog,
@@ -53,6 +54,11 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
+import {
+  generateInvoiceDotMatrixHtml,
+  printDotMatrixHtml,
+  DotMatrixPreview,
+} from "@/lib/dot-matrix-print"
 
 function formatRupiah(amount: number | string | undefined) {
   const val = typeof amount === "string" ? parseFloat(amount) || 0 : amount || 0
@@ -89,6 +95,7 @@ export default function InvoicesPage() {
   const [paymentPreselectedInv, setPaymentPreselectedInv] = useState<number | null>(null)
   const [previewItem, setPreviewItem] = useState<Invoice | null>(null)
   const [printItem, setPrintItem] = useState<Invoice | null>(null)
+  const [printFormat, setPrintFormat] = useState<"dotmatrix" | "pdf">("dotmatrix")
 
   const [confirmModal, setConfirmModal] = useState<{
     open: boolean
@@ -216,7 +223,202 @@ export default function InvoicesPage() {
     setTimeout(() => setFeedback(null), 3000)
   }
 
+  const handlePrintDocument = () => {
+    if (!printItem) return
+
+    if (printFormat === "dotmatrix") {
+      printDotMatrixHtml(
+        generateInvoiceDotMatrixHtml(printItem),
+        `Invoice - ${printItem.invoiceNo}`
+      )
+      return
+    }
+
+    const iframe = document.createElement("iframe")
+    iframe.style.position = "fixed"
+    iframe.style.right = "0"
+    iframe.style.bottom = "0"
+    iframe.style.width = "0"
+    iframe.style.height = "0"
+    iframe.style.border = "0"
+    document.body.appendChild(iframe)
+
+    const doc = iframe.contentWindow?.document
+    if (!doc) return
+
+    const itemsRows = (printItem.items || [])
+      .map(
+        (it, idx) => `
+        <tr>
+          <td style="text-align: center;">${idx + 1}</td>
+          <td style="font-family: monospace;">${it.productCode || it.product?.code || "-"}</td>
+          <td>${it.productName || it.product?.name || `Produk #${it.product_id}`}</td>
+          <td style="text-align: center; font-family: monospace;">${it.quantity} Unit</td>
+          <td style="text-align: right; font-family: monospace;">${formatRupiah(it.unit_price)}</td>
+          <td style="text-align: right; font-weight: bold; font-family: monospace;">${formatRupiah(it.total || it.subtotal || it.quantity * it.unit_price)}</td>
+        </tr>
+      `
+      )
+      .join("")
+
+    const contentHtml = `
+      <div class="pdf-container">
+        <div class="header">
+          <div>
+            <div class="company-name">MECCA DISTRIBUTION</div>
+            <div class="company-sub">PT MECCA DISTRIBUSI SOLUSINDO</div>
+            <div class="company-address">Kawasan Pergudangan Cakung Blok B No. 12, Jakarta Timur 13910</div>
+            <div class="company-address">Telp: (021) 8899-7700 | Email: finance@mecca.co.id</div>
+          </div>
+          <div class="doc-badge">
+            <div class="doc-title">FAKTUR PENJUALAN</div>
+            <div class="doc-no">${printItem.invoiceNo}</div>
+            <div class="doc-date">Tanggal: ${printItem.issueDate}</div>
+            <div class="doc-date" style="color: #dc2626;">Jatuh Tempo: ${printItem.dueDate}</div>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <div class="info-grid">
+          <div class="info-card">
+            <div class="info-label">DITAGIHKAN KEPADA (BILL TO):</div>
+            <div class="info-title">${printItem.customerName}</div>
+            <div class="info-detail">${printItem.customerAddress || "Alamat penagihan sesuai kontrak"}</div>
+            ${printItem.customerPhone ? `<div class="info-detail">Kontak: ${printItem.customerPhone}</div>` : ""}
+          </div>
+          <div class="info-card">
+            <div class="info-label">REFERENSI DOKUMEN:</div>
+            <div class="info-detail">No. Surat Jalan: <strong>${printItem.refDelivery || "-"}</strong></div>
+            <div class="info-detail">No. Sales Order: <strong>${printItem.refOrder || "-"}</strong></div>
+            <div class="info-detail">Status Pembayaran: <strong>${printItem.status}</strong></div>
+          </div>
+        </div>
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width: 40px; text-align: center;">NO</th>
+              <th style="width: 140px;">KODE BARANG</th>
+              <th>DESKRIPSI BARANG</th>
+              <th style="width: 90px; text-align: center;">JUMLAH</th>
+              <th style="width: 130px; text-align: right;">HARGA SATUAN</th>
+              <th style="width: 140px; text-align: right;">TOTAL</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsRows}
+          </tbody>
+        </table>
+
+        <div class="bottom-section">
+          <div class="payment-info">
+            <div class="info-label">INFO REKENING PEMBAYARAN:</div>
+            <div class="info-detail"><strong>Bank BCA:</strong> 7332-2000-22</div>
+            <div class="info-detail"><strong>Bank Mandiri:</strong> 127-00-0806202-6</div>
+            <div class="info-detail">a.n. <strong>PT MECCA DISTRIBUSI SOLUSINDO</strong></div>
+            ${printItem.notes ? `<div class="notes">Catatan: ${printItem.notes}</div>` : ""}
+          </div>
+          <div class="totals-table">
+            <div class="total-row"><span>Subtotal:</span><span>${formatRupiah(printItem.subtotal)}</span></div>
+            ${printItem.discount_amount > 0 ? `<div class="total-row"><span>Diskon:</span><span style="color: #dc2626;">- ${formatRupiah(printItem.discount_amount)}</span></div>` : ""}
+            ${printItem.tax_amount > 0 ? `<div class="total-row"><span>PPN:</span><span>+ ${formatRupiah(printItem.tax_amount)}</span></div>` : ""}
+            <div class="total-row grand"><span>Total Tagihan:</span><span>${formatRupiah(printItem.totalAmount)}</span></div>
+            <div class="total-row"><span>Sudah Dibayar:</span><span>${formatRupiah(printItem.paidAmount)}</span></div>
+            <div class="total-row" style="color: #dc2626; font-weight: bold;"><span>Sisa Tagihan:</span><span>${formatRupiah(printItem.remainingAmount)}</span></div>
+          </div>
+        </div>
+
+        <div class="signatures">
+          <div class="sig-col">
+            <div class="sig-title">Penerima Tagihan,</div>
+            <div class="sig-line">( ${printItem.customerName} )</div>
+          </div>
+          <div class="sig-col">
+            <div class="sig-title">Hormat Kami, Finance Dept.</div>
+            <div class="sig-line">( PT Mecca Distribusi Solusindo )</div>
+          </div>
+        </div>
+      </div>
+    `
+
+    doc.open()
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Faktur Penjualan - ${printItem.invoiceNo}</title>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 12mm 15mm;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+              color: #0f172a;
+              background: #fff;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            * { box-sizing: border-box; }
+            .pdf-container {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+              font-size: 12px;
+              line-height: 1.4;
+            }
+            .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 8px;
+            }
+            .company-name { font-size: 18px; font-weight: 800; color: #1e1b4b; }
+            .company-sub { font-size: 11px; font-weight: 700; color: #4338ca; }
+            .company-address { font-size: 10px; color: #64748b; margin-top: 1px; }
+            .doc-badge { text-align: right; }
+            .doc-title { font-size: 18px; font-weight: 900; color: #1e1b4b; letter-spacing: 1px; }
+            .doc-no { font-family: monospace; font-size: 13px; font-weight: bold; margin-top: 2px; }
+            .doc-date { font-size: 11px; color: #64748b; margin-top: 2px; }
+            .divider { border: 0; border-top: 2px solid #e2e8f0; margin: 12px 0 16px 0; }
+            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+            .info-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; }
+            .info-label { font-size: 9px; font-weight: 800; color: #64748b; letter-spacing: 0.5px; }
+            .info-title { font-size: 13px; font-weight: 700; color: #0f172a; margin-top: 2px; }
+            .info-detail { font-size: 11px; color: #334155; margin-top: 2px; }
+            .table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 11px; }
+            .table th { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 8px 10px; font-weight: 700; color: #334155; }
+            .table td { border: 1px solid #e2e8f0; padding: 7px 10px; color: #1e293b; }
+            .bottom-section { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+            .payment-info { width: 48%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; font-size: 11px; }
+            .notes { margin-top: 8px; font-size: 11px; color: #64748b; border-top: 1px dashed #cbd5e1; padding-top: 6px; }
+            .totals-table { width: 48%; font-size: 11px; }
+            .total-row { display: flex; justify-content: space-between; padding: 3px 0; }
+            .total-row.grand { font-size: 13px; font-weight: 800; color: #1e1b4b; border-top: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; padding: 6px 0; margin: 4px 0; }
+            .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 30px; text-align: center; }
+            .sig-col { padding: 0 16px; }
+            .sig-title { font-size: 11px; color: #64748b; margin-bottom: 50px; }
+            .sig-line { font-size: 11px; font-weight: 600; color: #1e293b; border-top: 1px solid #94a3b8; padding-top: 4px; }
+          </style>
+        </head>
+        <body>
+          ${contentHtml}
+        </body>
+      </html>
+    `)
+    doc.close()
+
+    iframe.contentWindow?.focus()
+    setTimeout(() => {
+      iframe.contentWindow?.print()
+      setTimeout(() => {
+        document.body.removeChild(iframe)
+      }, 1500)
+    }, 300)
+  }
+
   const totalBilled = (metrics.totalReceivables || 0) + (metrics.paidTotal || 0)
+
 
   return (
     <SidebarInset>
@@ -767,165 +969,220 @@ export default function InvoicesPage() {
       {/* Print Faktur Penjualan Modal */}
       {printItem && (
         <Dialog open={Boolean(printItem)} onOpenChange={(open) => !open && setPrintItem(null)}>
-          <DialogContent className="sm:max-w-[700px] max-h-[92vh] overflow-y-auto">
-            <div className="p-5 border border-dashed rounded-lg bg-white text-slate-900 font-sans space-y-4">
-              {/* Header */}
-              <div className="flex justify-between items-start border-b pb-4">
+          <DialogContent className="sm:max-w-[760px] max-h-[92vh] overflow-y-auto">
+            <DialogHeader className="border-b pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
+                  <DialogTitle className="text-base font-semibold flex items-center gap-2">
+                    <ReceiptIcon className="size-4 text-primary" />
+                    Cetak Faktur Penjualan (Invoice)
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                    No. Faktur: <span className="font-mono font-semibold text-foreground">{printItem.invoiceNo}</span> | Pelanggan: {printItem.customerName}
+                  </DialogDescription>
+                </div>
+
+                {/* 2 Print Format Tabs: Dot Matrix vs PDF */}
+                <div className="inline-flex rounded-lg border bg-muted p-1 shrink-0 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setPrintFormat("dotmatrix")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                      printFormat === "dotmatrix"
+                        ? "bg-background text-foreground shadow-xs"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <PrinterIcon className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                    Dot Matrix (Continuous Form)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPrintFormat("pdf")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                      printFormat === "pdf"
+                        ? "bg-background text-foreground shadow-xs"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <FileTextIcon className="size-3.5 text-blue-600 dark:text-blue-400" />
+                    PDF (Standar A4)
+                  </button>
+                </div>
+              </div>
+            </DialogHeader>
+
+            {printFormat === "dotmatrix" ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-lg text-xs text-emerald-800 dark:text-emerald-300">
                   <div className="flex items-center gap-2">
-                    <Building2Icon className="size-5 text-indigo-700" />
-                    <h2 className="text-xl font-black tracking-tight text-slate-900">MECCA DISTRIBUTION</h2>
+                    <PrinterIcon className="size-4 shrink-0 text-emerald-600" />
+                    <span>Format Continuous Form Dot Matrix (Epson LX/LQ Series 11" x 8.5")</span>
                   </div>
-                  <p className="text-[11px] font-semibold text-slate-600 mt-1">PT Mecca Distribusi Solusindo</p>
-                  <p className="text-[11px] text-slate-500">Kawasan Pergudangan Cakung Blok B No. 12, Jakarta Timur</p>
-                  <p className="text-[11px] text-slate-500">Telp: (021) 8899-7700 | Email: finance@mecca.co.id</p>
                 </div>
-                <div className="text-right">
-                  <div className="text-base font-black uppercase tracking-wider text-indigo-900">FAKTUR PENJUALAN</div>
-                  <div className="font-mono text-sm font-bold text-slate-800 mt-0.5">{printItem.invoiceNo}</div>
-                  <div className="text-[11px] text-slate-500 mt-1">Tanggal: <span className="font-mono font-medium">{printItem.issueDate}</span></div>
-                  <div className="text-[11px] text-slate-500">Jatuh Tempo: <span className="font-mono font-semibold text-rose-600">{printItem.dueDate}</span></div>
-                </div>
+                <DotMatrixPreview html={generateInvoiceDotMatrixHtml(printItem)} />
               </div>
-
-              {/* Bill to & Reference */}
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div className="bg-slate-50 p-3 rounded border border-slate-200">
-                  <div className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">Ditagihkan Kepada (Bill To):</div>
-                  <div className="font-bold text-slate-900 text-sm mt-1">{printItem.customerName}</div>
-                  <div className="text-slate-600 text-[11px] mt-0.5">{printItem.customerAddress || "Alamat penagihan sesuai kontrak"}</div>
-                  {printItem.customerPhone && (
-                    <div className="text-slate-500 text-[11px]">Kontak: {printItem.customerPhone}</div>
-                  )}
-                </div>
-                <div className="bg-slate-50 p-3 rounded border border-slate-200">
-                  <div className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">Referensi Dokumen:</div>
-                  <div className="text-slate-700 text-[11px] mt-1">
-                    <span className="font-medium">No. Surat Jalan:</span> <span className="font-mono font-semibold">{printItem.refDelivery || "-"}</span>
+            ) : (
+              <div className="p-5 border border-dashed rounded-lg bg-white text-slate-900 font-sans space-y-4">
+                {/* Header */}
+                <div className="flex justify-between items-start border-b pb-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Building2Icon className="size-5 text-indigo-700" />
+                      <h2 className="text-xl font-black tracking-tight text-slate-900">MECCA DISTRIBUTION</h2>
+                    </div>
+                    <p className="text-[11px] font-semibold text-slate-600 mt-1">PT Mecca Distribusi Solusindo</p>
+                    <p className="text-[11px] text-slate-500">Kawasan Pergudangan Cakung Blok B No. 12, Jakarta Timur</p>
+                    <p className="text-[11px] text-slate-500">Telp: (021) 8899-7700 | Email: finance@mecca.co.id</p>
                   </div>
-                  <div className="text-slate-700 text-[11px] mt-0.5">
-                    <span className="font-medium">No. Sales Order:</span> <span className="font-mono font-semibold">{printItem.refOrder || "-"}</span>
-                  </div>
-                  <div className="text-slate-700 text-[11px] mt-0.5">
-                    <span className="font-medium">Status Pembayaran:</span> <span className="font-bold text-indigo-800 uppercase text-[10px] ml-1">{printItem.status}</span>
+                  <div className="text-right">
+                    <div className="text-base font-black uppercase tracking-wider text-indigo-900">FAKTUR PENJUALAN</div>
+                    <div className="font-mono text-sm font-bold text-slate-800 mt-0.5">{printItem.invoiceNo}</div>
+                    <div className="text-[11px] text-slate-500 mt-1">Tanggal: <span className="font-mono font-medium">{printItem.issueDate}</span></div>
+                    <div className="text-[11px] text-slate-500">Jatuh Tempo: <span className="font-mono font-semibold text-rose-600">{printItem.dueDate}</span></div>
                   </div>
                 </div>
-              </div>
 
-              {/* Items Table */}
-              <div>
-                <table className="w-full text-xs border text-left">
-                  <thead className="bg-slate-100 text-slate-700 uppercase text-[10px]">
-                    <tr>
-                      <th className="p-2 border text-center w-10">No.</th>
-                      <th className="p-2 border">Kode Barang</th>
-                      <th className="p-2 border">Deskripsi Barang</th>
-                      <th className="p-2 border text-center">Jumlah</th>
-                      <th className="p-2 border text-right">Harga Satuan</th>
-                      <th className="p-2 border text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {printItem.items && printItem.items.length > 0 ? (
-                      printItem.items.map((it, idx) => (
-                        <tr key={idx} className="border-b">
-                          <td className="p-2 border text-center">{idx + 1}</td>
-                          <td className="p-2 border font-mono text-slate-600">{it.productCode || it.product?.code || "-"}</td>
-                          <td className="p-2 border font-medium text-slate-800">{it.productName || it.product?.name || `Produk #${it.product_id}`}</td>
-                          <td className="p-2 border text-center font-mono">{it.quantity} Unit</td>
-                          <td className="p-2 border text-right font-mono">{formatRupiah(it.unit_price)}</td>
-                          <td className="p-2 border text-right font-mono font-semibold text-slate-900">
-                            {formatRupiah(it.total || it.subtotal || it.quantity * it.unit_price)}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={6} className="p-3 text-center text-slate-500">Tidak ada rincian item</td>
-                      </tr>
+                {/* Bill to & Reference */}
+                <div className="grid grid-cols-2 gap-4 text-xs">
+                  <div className="bg-slate-50 p-3 rounded border border-slate-200">
+                    <div className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">Ditagihkan Kepada (Bill To):</div>
+                    <div className="font-bold text-slate-900 text-sm mt-1">{printItem.customerName}</div>
+                    <div className="text-slate-600 text-[11px] mt-0.5">{printItem.customerAddress || "Alamat penagihan sesuai kontrak"}</div>
+                    {printItem.customerPhone && (
+                      <div className="text-slate-500 text-[11px]">Kontak: {printItem.customerPhone}</div>
                     )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Summary and Bank Details */}
-              <div className="grid grid-cols-2 gap-4 text-xs pt-2">
-                <div className="border border-slate-200 rounded p-3 bg-slate-50 space-y-1">
-                  <div className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">Instruksi Pembayaran:</div>
-                  <p className="text-[11px] text-slate-600">Pembayaran dapat ditransfer melalui rekening resmi:</p>
-                  <div className="pt-1 text-[11px] space-y-0.5">
-                    <div>Bank Central Asia (BCA): <span className="font-mono font-bold text-slate-800">522-098-1234</span></div>
-                    <div>Bank Mandiri: <span className="font-mono font-bold text-slate-800">123-00-9876543-2</span></div>
-                    <div className="text-slate-600">a.n. <span className="font-semibold text-slate-800">PT MECCA DISTRIBUSI SOLUSINDO</span></div>
                   </div>
-                  {printItem.notes && (
-                    <div className="pt-2 text-[10px] text-slate-500 italic">
-                      Catatan: {printItem.notes}
+                  <div className="bg-slate-50 p-3 rounded border border-slate-200">
+                    <div className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">Referensi Dokumen:</div>
+                    <div className="text-slate-700 text-[11px] mt-1">
+                      <span className="font-medium">No. Surat Jalan:</span> <span className="font-mono font-semibold">{printItem.refDelivery || "-"}</span>
                     </div>
-                  )}
+                    <div className="text-slate-700 text-[11px] mt-0.5">
+                      <span className="font-medium">No. Sales Order:</span> <span className="font-mono font-semibold">{printItem.refOrder || "-"}</span>
+                    </div>
+                    <div className="text-slate-700 text-[11px] mt-0.5">
+                      <span className="font-medium">Status Pembayaran:</span> <span className="font-bold text-indigo-800 uppercase text-[10px] ml-1">{printItem.status}</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-1.5 text-xs text-right">
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Subtotal:</span>
-                    <span className="font-mono font-medium">{formatRupiah(printItem.subtotal)}</span>
-                  </div>
-                  {printItem.discount_amount > 0 && (
-                    <div className="flex justify-between text-emerald-700">
-                      <span>Potongan Diskon:</span>
-                      <span className="font-mono">- {formatRupiah(printItem.discount_amount)}</span>
-                    </div>
-                  )}
-                  {printItem.tax_amount > 0 && (
-                    <div className="flex justify-between text-slate-600">
-                      <span>PPN (11%):</span>
-                      <span className="font-mono">+ {formatRupiah(printItem.tax_amount)}</span>
-                    </div>
-                  )}
-                  <div className="border-t border-slate-300 pt-1.5 flex justify-between font-bold text-sm text-slate-900">
-                    <span>Total Tagihan:</span>
-                    <span className="font-mono text-indigo-950">{formatRupiah(printItem.totalAmount)}</span>
-                  </div>
-                  <div className="flex justify-between font-medium text-emerald-700">
-                    <span>Sudah Dibayar:</span>
-                    <span className="font-mono">{formatRupiah(printItem.paidAmount)}</span>
-                  </div>
-                  <div className="flex justify-between font-bold text-rose-700 text-xs">
-                    <span>Sisa Tagihan:</span>
-                    <span className="font-mono">{formatRupiah(printItem.remainingAmount)}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Signatures */}
-              <div className="grid grid-cols-2 gap-4 pt-6 text-center text-xs">
+                {/* Items Table */}
                 <div>
-                  <div className="text-slate-500 mb-12">Penerima Tagihan,</div>
-                  <div className="border-t border-slate-400 mx-8 pt-1 text-slate-700 font-medium">
-                    ( {printItem.customerName} )
+                  <table className="w-full text-xs border text-left">
+                    <thead className="bg-slate-100 text-slate-700 uppercase text-[10px]">
+                      <tr>
+                        <th className="p-2 border text-center w-10">No.</th>
+                        <th className="p-2 border">Kode Barang</th>
+                        <th className="p-2 border">Deskripsi Barang</th>
+                        <th className="p-2 border text-center">Jumlah</th>
+                        <th className="p-2 border text-right">Harga Satuan</th>
+                        <th className="p-2 border text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {printItem.items && printItem.items.length > 0 ? (
+                        printItem.items.map((it, idx) => (
+                          <tr key={idx} className="border-b">
+                            <td className="p-2 border text-center">{idx + 1}</td>
+                            <td className="p-2 border font-mono text-slate-600">{it.productCode || it.product?.code || "-"}</td>
+                            <td className="p-2 border font-medium text-slate-800">{it.productName || it.product?.name || `Produk #${it.product_id}`}</td>
+                            <td className="p-2 border text-center font-mono">{it.quantity} Unit</td>
+                            <td className="p-2 border text-right font-mono">{formatRupiah(it.unit_price)}</td>
+                            <td className="p-2 border text-right font-mono font-semibold text-slate-900">
+                              {formatRupiah(it.total || it.subtotal || it.quantity * it.unit_price)}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="p-3 text-center text-slate-500">Tidak ada rincian item</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Summary and Bank Details */}
+                <div className="grid grid-cols-2 gap-4 text-xs pt-2">
+                  <div className="border border-slate-200 rounded p-3 bg-slate-50 space-y-1">
+                    <div className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">Instruksi Pembayaran:</div>
+                    <p className="text-[11px] text-slate-600">Pembayaran dapat ditransfer melalui rekening resmi:</p>
+                    <div className="pt-1 text-[11px] space-y-0.5">
+                      <div>Bank Central Asia (BCA): <span className="font-mono font-bold text-slate-800">7332-2000-22</span></div>
+                      <div>Bank Mandiri: <span className="font-mono font-bold text-slate-800">127-00-0806202-6</span></div>
+                      <div className="text-slate-600">a.n. <span className="font-semibold text-slate-800">PT MECCA DISTRIBUSI SOLUSINDO</span></div>
+                    </div>
+                    {printItem.notes && (
+                      <div className="pt-2 text-[10px] text-slate-500 italic">
+                        Catatan: {printItem.notes}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5 text-xs text-right">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Subtotal:</span>
+                      <span className="font-mono font-medium">{formatRupiah(printItem.subtotal)}</span>
+                    </div>
+                    {printItem.discount_amount > 0 && (
+                      <div className="flex justify-between text-emerald-700">
+                        <span>Potongan Diskon:</span>
+                        <span className="font-mono">- {formatRupiah(printItem.discount_amount)}</span>
+                      </div>
+                    )}
+                    {printItem.tax_amount > 0 && (
+                      <div className="flex justify-between text-slate-600">
+                        <span>PPN (11%):</span>
+                        <span className="font-mono">+ {formatRupiah(printItem.tax_amount)}</span>
+                      </div>
+                    )}
+                    <div className="border-t border-slate-300 pt-1.5 flex justify-between font-bold text-sm text-slate-900">
+                      <span>Total Tagihan:</span>
+                      <span className="font-mono text-indigo-950">{formatRupiah(printItem.totalAmount)}</span>
+                    </div>
+                    <div className="flex justify-between font-medium text-emerald-700">
+                      <span>Sudah Dibayar:</span>
+                      <span className="font-mono">{formatRupiah(printItem.paidAmount)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-rose-700 text-xs">
+                      <span>Sisa Tagihan:</span>
+                      <span className="font-mono">{formatRupiah(printItem.remainingAmount)}</span>
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <div className="text-slate-500 mb-12">Hormat Kami, Finance Dept.</div>
-                  <div className="border-t border-slate-400 mx-8 pt-1 text-slate-700 font-medium">
-                    ( PT Mecca Distribusi Solusindo )
+
+                {/* Signatures */}
+                <div className="grid grid-cols-2 gap-4 pt-6 text-center text-xs">
+                  <div>
+                    <div className="text-slate-500 mb-12">Penerima Tagihan,</div>
+                    <div className="border-t border-slate-400 mx-8 pt-1 text-slate-700 font-medium">
+                      ( {printItem.customerName} )
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500 mb-12">Hormat Kami, Finance Dept.</div>
+                    <div className="border-t border-slate-400 mx-8 pt-1 text-slate-700 font-medium">
+                      ( PT Mecca Distribusi Solusindo )
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
-            <DialogFooter>
+            <DialogFooter className="gap-2 sm:gap-0">
               <Button size="sm" variant="outline" onClick={() => setPrintItem(null)}>
                 Tutup
               </Button>
-              <Button size="sm" onClick={() => window.print()}>
-                <PrinterIcon className="size-3.5 mr-1.5" />
-                Cetak Faktur (Print)
+              <Button size="sm" onClick={handlePrintDocument} className="gap-1.5">
+                <PrinterIcon className="size-3.5" />
+                {printFormat === "dotmatrix" ? "Cetak ke Dot Matrix" : "Cetak / Simpan PDF"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
+
 
       {/* Confirm Modal */}
       <ConfirmModal

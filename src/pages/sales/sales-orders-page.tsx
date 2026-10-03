@@ -36,6 +36,7 @@ import {
   Loader2Icon,
   PencilIcon,
   PrinterIcon,
+  FileTextIcon,
 } from "lucide-react"
 import {
   Dialog,
@@ -45,6 +46,12 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
+import {
+  generateSalesOrderDotMatrixHtml,
+  printDotMatrixHtml,
+  DotMatrixPreview,
+} from "@/lib/dot-matrix-print"
+
 
 function formatRupiah(amount: number) {
   return `IDR ${amount.toLocaleString("id-ID")}`
@@ -78,6 +85,7 @@ export default function SalesOrdersPage() {
   const [selectedSoForDelivery, setSelectedSoForDelivery] = useState<number | null>(null)
   const [previewItem, setPreviewItem] = useState<SalesOrder | null>(null)
   const [printItem, setPrintItem] = useState<SalesOrder | null>(null)
+  const [printFormat, setPrintFormat] = useState<"dotmatrix" | "pdf">("dotmatrix")
 
   const [confirmModal, setConfirmModal] = useState<{
     open: boolean
@@ -210,7 +218,16 @@ export default function SalesOrdersPage() {
   const handlePrintDirect = () => {
     if (!printItem) return
 
+    if (printFormat === "dotmatrix") {
+      printDotMatrixHtml(
+        generateSalesOrderDotMatrixHtml(printItem),
+        `Pesanan Penjualan - ${printItem.orderNo}`
+      )
+      return
+    }
+
     const iframe = document.createElement("iframe")
+
     iframe.style.position = "fixed"
     iframe.style.right = "0"
     iframe.style.bottom = "0"
@@ -1123,161 +1140,205 @@ export default function SalesOrdersPage() {
       {/* Print / Download Sales Order Document Modal */}
       {printItem && (
         <Dialog open={Boolean(printItem)} onOpenChange={(open) => !open && setPrintItem(null)}>
-          <DialogContent className="sm:max-w-[700px] max-h-[92vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-base font-semibold flex items-center justify-between">
-                <span>Cetak / Download Pesanan Penjualan</span>
-                <span className="font-mono text-xs font-bold text-primary">{printItem.orderNo}</span>
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground">
-                Pratinjau resmi dokumen pesanan penjualan PT Mecca Distribusi Solusindo.
-              </DialogDescription>
+          <DialogContent className="sm:max-w-[760px] max-h-[92vh] overflow-y-auto">
+            <DialogHeader className="border-b pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <DialogTitle className="text-base font-semibold flex items-center gap-2">
+                    <PrinterIcon className="size-4 text-primary" />
+                    Cetak Pesanan Penjualan (Sales Order)
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                    No. SO: <span className="font-mono font-semibold text-foreground">{printItem.orderNo}</span> | Pelanggan: {printItem.customerName}
+                  </DialogDescription>
+                </div>
+
+                {/* 2 Print Format Tabs: Dot Matrix vs PDF */}
+                <div className="inline-flex rounded-lg border bg-muted p-1 shrink-0 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setPrintFormat("dotmatrix")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                      printFormat === "dotmatrix"
+                        ? "bg-background text-foreground shadow-xs"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <PrinterIcon className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                    Dot Matrix (Continuous Form)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPrintFormat("pdf")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                      printFormat === "pdf"
+                        ? "bg-background text-foreground shadow-xs"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <FileTextIcon className="size-3.5 text-blue-600 dark:text-blue-400" />
+                    PDF (Standar A4)
+                  </button>
+                </div>
+              </div>
             </DialogHeader>
 
-            <div className="space-y-4 py-2 text-xs">
-              {/* Document Paper Preview */}
-              <div className="border rounded-lg p-5 bg-card shadow-xs space-y-4">
-                {/* Header */}
-                <div className="flex justify-between items-start border-b pb-3">
-                  <div>
-                    <div className="font-bold text-sm text-foreground">MECCA DISTRIBUTION</div>
-                    <div className="font-semibold text-xs text-primary">PT MECCA DISTRIBUSI SOLUSINDO</div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5">
-                      Kawasan Pergudangan Cakung Blok B-12, Jakarta Timur 13910
-                    </div>
-                    <div className="text-[11px] text-muted-foreground">
-                      Telp: (021) 8901-2345 | sales@mecca.co.id
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-sm text-foreground">PESANAN PENJUALAN</div>
-                    <div className="font-mono font-bold text-primary text-xs mt-0.5">{printItem.orderNo}</div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5">Tanggal: {printItem.date}</div>
-                    <div className="text-[10px] font-semibold uppercase text-cyan-600 mt-0.5">{printItem.status}</div>
+            {printFormat === "dotmatrix" ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-lg text-xs text-emerald-800 dark:text-emerald-300">
+                  <div className="flex items-center gap-2">
+                    <PrinterIcon className="size-4 shrink-0 text-emerald-600" />
+                    <span>Format Continuous Form Dot Matrix (Epson LX/LQ Series 11" x 8.5")</span>
                   </div>
                 </div>
+                <DotMatrixPreview html={generateSalesOrderDotMatrixHtml(printItem)} />
+              </div>
+            ) : (
+              <div className="space-y-4 py-2 text-xs">
+                {/* Document Paper Preview */}
+                <div className="border rounded-lg p-5 bg-card shadow-xs space-y-4">
+                  {/* Header */}
+                  <div className="flex justify-between items-start border-b pb-3">
+                    <div>
+                      <div className="font-bold text-sm text-foreground">MECCA DISTRIBUTION</div>
+                      <div className="font-semibold text-xs text-primary">PT MECCA DISTRIBUSI SOLUSINDO</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                        Kawasan Pergudangan Cakung Blok B-12, Jakarta Timur 13910
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        Telp: (021) 8901-2345 | sales@mecca.co.id
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-sm text-foreground">PESANAN PENJUALAN</div>
+                      <div className="font-mono font-bold text-primary text-xs mt-0.5">{printItem.orderNo}</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">Tanggal: {printItem.date}</div>
+                      <div className="text-[10px] font-semibold uppercase text-cyan-600 mt-0.5">{printItem.status}</div>
+                    </div>
+                  </div>
 
-                {/* Recipient & Customer Grid */}
-                <div className="grid grid-cols-2 gap-3 text-xs bg-muted/40 p-3 rounded-lg border">
-                  <div>
-                    <div className="text-[10px] font-bold uppercase text-muted-foreground mb-1">
-                      Pelanggan (Customer):
+                  {/* Recipient & Customer Grid */}
+                  <div className="grid grid-cols-2 gap-3 text-xs bg-muted/40 p-3 rounded-lg border">
+                    <div>
+                      <div className="text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                        Pelanggan (Customer):
+                      </div>
+                      <div className="font-semibold text-foreground">{printItem.customerName}</div>
+                      <div className="text-muted-foreground text-[11px] mt-0.5">
+                        Ref Quotation: <span className="font-medium text-foreground">{printItem.refQuotation || "-"}</span>
+                      </div>
+                      <div className="text-muted-foreground text-[11px]">
+                        Gudang: <span className="font-medium text-foreground">
+                          {typeof printItem.warehouse === "object" ? printItem.warehouse?.name : printItem.warehouse || "Gudang Utama"}
+                        </span>
+                      </div>
                     </div>
-                    <div className="font-semibold text-foreground">{printItem.customerName}</div>
-                    <div className="text-muted-foreground text-[11px] mt-0.5">
-                      Ref Quotation: <span className="font-medium text-foreground">{printItem.refQuotation || "-"}</span>
-                    </div>
-                    <div className="text-muted-foreground text-[11px]">
-                      Gudang: <span className="font-medium text-foreground">
-                        {typeof printItem.warehouse === "object" ? printItem.warehouse?.name : printItem.warehouse || "Gudang Utama"}
-                      </span>
+
+                    <div>
+                      <div className="text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                        Penerima & Alamat Kirim:
+                      </div>
+                      <div className="font-semibold text-foreground">{printItem.recipient_name || printItem.customerName}</div>
+                      <div className="text-muted-foreground text-[11px] mt-0.5">
+                        Kontak: <span className="font-medium text-foreground">{printItem.recipient_phone || printItem.customer?.phone || "-"}</span>
+                      </div>
+                      <div className="text-muted-foreground text-[11px] line-clamp-2">
+                        Alamat: <span className="text-foreground">{printItem.shipping_address || printItem.customer?.address || "Sesuai alamat kontrak"}</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div>
-                    <div className="text-[10px] font-bold uppercase text-muted-foreground mb-1">
-                      Penerima & Alamat Kirim:
-                    </div>
-                    <div className="font-semibold text-foreground">{printItem.recipient_name || printItem.customerName}</div>
-                    <div className="text-muted-foreground text-[11px] mt-0.5">
-                      Kontak: <span className="font-medium text-foreground">{printItem.recipient_phone || printItem.customer?.phone || "-"}</span>
-                    </div>
-                    <div className="text-muted-foreground text-[11px] line-clamp-2">
-                      Alamat: <span className="text-foreground">{printItem.shipping_address || printItem.customer?.address || "Sesuai alamat kontrak"}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Items Table */}
-                <table className="w-full text-xs border border-border/70">
-                  <thead className="bg-muted/60 text-muted-foreground text-[10px] uppercase font-semibold">
-                    <tr>
-                      <th className="p-2 border text-center w-8">No</th>
-                      <th className="p-2 border text-left">Kode & Nama Barang</th>
-                      <th className="p-2 border text-right w-16">Qty</th>
-                      <th className="p-2 border text-right w-24">Harga</th>
-                      <th className="p-2 border text-right w-28">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {(printItem.items || []).map((it, idx) => (
-                      <tr key={idx} className="hover:bg-muted/30">
-                        <td className="p-2 border text-center">{idx + 1}</td>
-                        <td className="p-2 border">
-                          <div className="font-medium text-foreground">{it.productName || it.product?.name || `Produk #${it.product_id}`}</div>
-                          <div className="text-[10px] text-muted-foreground font-mono">{it.productCode || it.product?.code || "-"}</div>
-                        </td>
-                        <td className="p-2 border text-right font-mono font-semibold">{it.quantity}</td>
-                        <td className="p-2 border text-right font-mono">{formatRupiah(it.unit_price)}</td>
-                        <td className="p-2 border text-right font-mono font-bold text-foreground">
-                          {formatRupiah(it.total || (it.quantity * it.unit_price))}
-                        </td>
+                  {/* Items Table */}
+                  <table className="w-full text-xs border border-border/70">
+                    <thead className="bg-muted/60 text-muted-foreground text-[10px] uppercase font-semibold">
+                      <tr>
+                        <th className="p-2 border text-center w-8">No</th>
+                        <th className="p-2 border text-left">Kode & Nama Barang</th>
+                        <th className="p-2 border text-right w-16">Qty</th>
+                        <th className="p-2 border text-right w-24">Harga</th>
+                        <th className="p-2 border text-right w-28">Total</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y">
+                      {(printItem.items || []).map((it, idx) => (
+                        <tr key={idx} className="hover:bg-muted/30">
+                          <td className="p-2 border text-center">{idx + 1}</td>
+                          <td className="p-2 border">
+                            <div className="font-medium text-foreground">{it.productName || it.product?.name || `Produk #${it.product_id}`}</div>
+                            <div className="text-[10px] text-muted-foreground font-mono">{it.productCode || it.product?.code || "-"}</div>
+                          </td>
+                          <td className="p-2 border text-right font-mono font-semibold">{it.quantity}</td>
+                          <td className="p-2 border text-right font-mono">{formatRupiah(it.unit_price)}</td>
+                          <td className="p-2 border text-right font-mono font-bold text-foreground">
+                            {formatRupiah(it.total || (it.quantity * it.unit_price))}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
 
-                {/* Summary & Notes */}
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <div className="bg-muted/20 p-2.5 rounded border text-[11px]">
-                    <span className="font-semibold text-muted-foreground block mb-0.5">Catatan Pesanan:</span>
-                    <span className="text-foreground">{printItem.notes || "Tidak ada catatan tambahan."}</span>
-                  </div>
-                  <div className="space-y-1 text-right text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Subtotal:</span>
-                      <span className="font-mono font-medium">{formatRupiah(printItem.subtotal)}</span>
+                  {/* Summary & Notes */}
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <div className="bg-muted/20 p-2.5 rounded border text-[11px]">
+                      <span className="font-semibold text-muted-foreground block mb-0.5">Catatan Pesanan:</span>
+                      <span className="text-foreground">{printItem.notes || "Tidak ada catatan tambahan."}</span>
                     </div>
-                    {printItem.discount_amount > 0 && (
-                      <div className="flex justify-between text-rose-500">
-                        <span>Diskon:</span>
-                        <span className="font-mono">- {formatRupiah(printItem.discount_amount)}</span>
-                      </div>
-                    )}
-                    {printItem.tax_amount > 0 && (
+                    <div className="space-y-1 text-right text-xs">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">PPN:</span>
-                        <span className="font-mono">+ {formatRupiah(printItem.tax_amount)}</span>
+                        <span className="text-muted-foreground">Subtotal:</span>
+                        <span className="font-mono font-medium">{formatRupiah(printItem.subtotal)}</span>
                       </div>
-                    )}
-                    <div className="flex justify-between font-bold text-sm pt-1.5 border-t">
-                      <span>Grand Total:</span>
-                      <span className="font-mono text-primary">{formatRupiah(printItem.totalAmount)}</span>
+                      {printItem.discount_amount > 0 && (
+                        <div className="flex justify-between text-rose-500">
+                          <span>Diskon:</span>
+                          <span className="font-mono">- {formatRupiah(printItem.discount_amount)}</span>
+                        </div>
+                      )}
+                      {printItem.tax_amount > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">PPN:</span>
+                          <span className="font-mono">+ {formatRupiah(printItem.tax_amount)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-bold text-sm pt-1.5 border-t">
+                        <span>Grand Total:</span>
+                        <span className="font-mono text-primary">{formatRupiah(printItem.totalAmount)}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Signatures */}
-                <div className="grid grid-cols-3 gap-3 pt-4 text-center text-[10px]">
-                  <div>
-                    <div className="text-muted-foreground mb-8">Pemesan / Pelanggan,</div>
-                    <div className="border-t mx-4 pt-1 font-semibold text-foreground">
-                      ( {printItem.customerName} )
+                  {/* Signatures */}
+                  <div className="grid grid-cols-3 gap-3 pt-4 text-center text-[10px]">
+                    <div>
+                      <div className="text-muted-foreground mb-8">Pemesan / Pelanggan,</div>
+                      <div className="border-t mx-4 pt-1 font-semibold text-foreground">
+                        ( {printItem.customerName} )
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground mb-8">Bagian Gudang,</div>
-                    <div className="border-t mx-4 pt-1 font-semibold text-foreground">
-                      (                  )
+                    <div>
+                      <div className="text-muted-foreground mb-8">Bagian Gudang,</div>
+                      <div className="border-t mx-4 pt-1 font-semibold text-foreground">
+                        (                  )
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground mb-8">Sales & Finance Dept.,</div>
-                    <div className="border-t mx-4 pt-1 font-semibold text-foreground">
-                      ( PT Mecca Distribusi Solusindo )
+                    <div>
+                      <div className="text-muted-foreground mb-8">Sales & Finance Dept.,</div>
+                      <div className="border-t mx-4 pt-1 font-semibold text-foreground">
+                        ( PT Mecca Distribusi Solusindo )
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
-            <DialogFooter>
+            <DialogFooter className="gap-2 sm:gap-0">
               <Button size="sm" variant="outline" onClick={() => setPrintItem(null)}>
                 Tutup
               </Button>
               <Button size="sm" onClick={handlePrintDirect} className="gap-1.5">
                 <PrinterIcon className="size-3.5" />
-                Cetak / Download PDF
+                {printFormat === "dotmatrix" ? "Cetak ke Dot Matrix" : "Cetak / Simpan PDF"}
               </Button>
             </DialogFooter>
           </DialogContent>
