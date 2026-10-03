@@ -986,12 +986,12 @@ export function generateSalesOrderDotMatrixHtml(order: SalesOrder): string {
 
 export const DOT_MATRIX_PRINT_PAGE_CSS = `
   @page {
-    size: landscape;
+    size: portrait;
     margin: 8mm 12mm;
   }
   @media print {
     @page {
-      size: landscape;
+      size: portrait;
       margin: 8mm 12mm;
     }
     html, body {
