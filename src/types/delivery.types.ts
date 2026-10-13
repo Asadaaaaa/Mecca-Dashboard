@@ -19,8 +19,10 @@ export interface DeliveryItemDetail {
 }
 
 export interface DeliverySigner {
-  title: string
+  city?: string
+  date?: string
   name?: string
+  title?: string
 }
 
 export interface Delivery {

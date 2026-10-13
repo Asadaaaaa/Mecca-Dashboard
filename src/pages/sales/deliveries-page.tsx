@@ -21,7 +21,7 @@ import { usePermission } from "@/hooks/use-permission"
 import { deliveryService } from "@/services/delivery.service"
 import { DeliveryDialog } from "@/pages/sales/delivery-dialog"
 import { InvoiceDialog } from "@/pages/sales/invoice-dialog"
-import type { Delivery, DeliveryMetrics } from "@/types/delivery.types"
+import type { Delivery, DeliveryMetrics, DeliverySigner } from "@/types/delivery.types"
 import {
   SunIcon,
   MoonIcon,
@@ -253,9 +253,26 @@ export default function DeliveriesPage() {
     if (item.notes) {
       text += `Catatan      : ${item.notes}\n`
     }
-    text += dashed + "\n"
-    text += `     Tanda Terima,              Pengemudi/Kurir,             Petugas Gudang,\n\n\n\n`
-    text += `   (                )         (                )           (                )\n`
+    const rawSigners = getDeliverySigners(item)
+    if (rawSigners.length === 1) {
+      const s = rawSigners[0]
+      const h = `${s.city || "Jakarta"}, ${formatDotMatrixDateOnly(s.date || item.date)}`
+      text += `${pad("", 24)}${pad(h, 32)}\n\n\n\n`
+      text += `${pad("", 24)}( ${pad(s.name || "................", 24)} )\n`
+    } else if (rawSigners.length === 2) {
+      const s1 = rawSigners[0]
+      const s2 = rawSigners[1]
+      const h1 = `${s1.city || "Jakarta"}, ${formatDotMatrixDateOnly(s1.date || item.date)}`
+      const h2 = `${s2.city || "Jakarta"}, ${formatDotMatrixDateOnly(s2.date || item.date)}`
+      text += `${pad(h1, 40)}${pad(h2, 40)}\n\n\n\n`
+      text += `${pad(`( ${s1.name || "................"} )`, 40)}${pad(`( ${s2.name || "................"} )`, 40)}\n`
+    } else {
+      const colLen = Math.max(16, Math.floor(80 / rawSigners.length))
+      const headers = rawSigners.map((s) => pad(`${s.city || "Jakarta"}, ${formatDotMatrixDateOnly(s.date || item.date)}`, colLen)).join("")
+      const names = rawSigners.map((s) => pad(`( ${s.name || "............"} )`, colLen)).join("")
+      text += headers + "\n\n\n\n"
+      text += names + "\n"
+    }
     text += line + "\n"
     text += `* Lembar 1: Putih (Pelanggan)  | Lembar 2: Merah (Gudang)  | Lembar 3: Kuning (Finance) *\n`
     return text
@@ -314,9 +331,8 @@ export default function DeliveriesPage() {
         .join("")
 
     const pdfSigners = getDeliverySigners(printItem)
-    const pdfCity = printItem.signature_city || "Jakarta"
-    const pdfDate = formatDotMatrixDateOnly(printItem.signature_date || printItem.date || new Date())
-    const pdfRightHeader = `${pdfCity}, ${pdfDate}`
+    const getPdfHeader = (s: DeliverySigner) =>
+      `${s.city || printItem.signature_city || "Jakarta"}, ${formatDotMatrixDateOnly(s.date || printItem.signature_date || printItem.date || new Date())}`
 
     let pdfSignaturesHtml = ""
     if (pdfSigners.length === 1) {
@@ -325,8 +341,7 @@ export default function DeliveriesPage() {
         <table style="width: 100%; margin-top: 20px; margin-bottom: 16px; border-collapse: collapse;">
           <tr>
             <td style="width: 50%; text-align: center; vertical-align: top; margin: 0 auto; display: block;">
-              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">${pdfRightHeader}</div>
-              <div style="font-size: 11px; font-weight: 600; color: #475569;">${s.title}</div>
+              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">${getPdfHeader(s)}</div>
               <div style="height: 50px;"></div>
               <div style="font-size: 11px; font-weight: 600; color: #1e293b; border-top: 1px solid #cbd5e1; margin: 0 25px; padding-top: 4px;">( ${s.name || "....................................."} )</div>
             </td>
@@ -340,15 +355,13 @@ export default function DeliveriesPage() {
         <table style="width: 100%; margin-top: 20px; margin-bottom: 16px; border-collapse: collapse;">
           <tr>
             <td style="width: 38%; text-align: center; vertical-align: top;">
-              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">&nbsp;</div>
-              <div style="font-size: 11px; font-weight: 600; color: #475569;">${s1.title}</div>
+              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">${getPdfHeader(s1)}</div>
               <div style="height: 50px;"></div>
               <div style="font-size: 11px; font-weight: 600; color: #1e293b; border-top: 1px solid #cbd5e1; margin: 0 15px; padding-top: 4px;">( ${s1.name || "....................................."} )</div>
             </td>
             <td style="width: 24%;">&nbsp;</td>
             <td style="width: 38%; text-align: center; vertical-align: top;">
-              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">${pdfRightHeader}</div>
-              <div style="font-size: 11px; font-weight: 600; color: #475569;">${s2.title}</div>
+              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">${getPdfHeader(s2)}</div>
               <div style="height: 50px;"></div>
               <div style="font-size: 11px; font-weight: 600; color: #1e293b; border-top: 1px solid #cbd5e1; margin: 0 15px; padding-top: 4px;">( ${s2.name || "....................................."} )</div>
             </td>
@@ -360,20 +373,17 @@ export default function DeliveriesPage() {
         <table style="width: 100%; margin-top: 20px; margin-bottom: 16px; border-collapse: collapse;">
           <tr>
             <td style="width: 33.33%; text-align: center; vertical-align: top;">
-              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">&nbsp;</div>
-              <div style="font-size: 11px; font-weight: 600; color: #475569;">${pdfSigners[0].title}</div>
+              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">${getPdfHeader(pdfSigners[0])}</div>
               <div style="height: 50px;"></div>
               <div style="font-size: 11px; font-weight: 600; color: #1e293b; border-top: 1px solid #cbd5e1; margin: 0 15px; padding-top: 4px;">( ${pdfSigners[0].name || "....................................."} )</div>
             </td>
             <td style="width: 33.33%; text-align: center; vertical-align: top;">
-              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">&nbsp;</div>
-              <div style="font-size: 11px; font-weight: 600; color: #475569;">${pdfSigners[1].title}</div>
+              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">${getPdfHeader(pdfSigners[1])}</div>
               <div style="height: 50px;"></div>
               <div style="font-size: 11px; font-weight: 600; color: #1e293b; border-top: 1px solid #cbd5e1; margin: 0 15px; padding-top: 4px;">( ${pdfSigners[1].name || "....................................."} )</div>
             </td>
             <td style="width: 33.33%; text-align: center; vertical-align: top;">
-              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">${pdfRightHeader}</div>
-              <div style="font-size: 11px; font-weight: 600; color: #475569;">${pdfSigners[2].title}</div>
+              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">${getPdfHeader(pdfSigners[2])}</div>
               <div style="height: 50px;"></div>
               <div style="font-size: 11px; font-weight: 600; color: #1e293b; border-top: 1px solid #cbd5e1; margin: 0 15px; padding-top: 4px;">( ${pdfSigners[2].name || "....................................."} )</div>
             </td>
@@ -383,12 +393,10 @@ export default function DeliveriesPage() {
     } else {
       const colW = (100 / pdfSigners.length).toFixed(2)
       const cells = pdfSigners
-        .map((s, idx) => {
-          const isRight = idx === pdfSigners.length - 1
+        .map((s) => {
           return `
             <td style="width: ${colW}%; text-align: center; vertical-align: top;">
-              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">${isRight ? pdfRightHeader : "&nbsp;"}</div>
-              <div style="font-size: 11px; font-weight: 600; color: #475569;">${s.title}</div>
+              <div style="font-size: 10px; color: #64748b; margin-bottom: 4px;">${getPdfHeader(s)}</div>
               <div style="height: 50px;"></div>
               <div style="font-size: 11px; font-weight: 600; color: #1e293b; border-top: 1px solid #cbd5e1; margin: 0 10px; padding-top: 4px;">( ${s.name || "....................................."} )</div>
             </td>
@@ -1283,16 +1291,14 @@ export default function DeliveriesPage() {
 
                 {(() => {
                   const sList = getDeliverySigners(printItem)
-                  const pCity = printItem.signature_city || "Jakarta"
-                  const pDate = formatDotMatrixDateOnly(printItem.signature_date || printItem.date)
-                  const rightHeader = `${pCity}, ${pDate}`
+                  const getPreviewHeader = (s: DeliverySigner) =>
+                    `${s.city || printItem.signature_city || "Jakarta"}, ${formatDotMatrixDateOnly(s.date || printItem.signature_date || printItem.date)}`
 
                   if (sList.length === 1) {
                     return (
                       <div className="flex justify-center pt-4 text-center text-xs">
                         <div className="w-[50%]">
-                          <div className="text-[10px] text-slate-500 mb-1">{rightHeader}</div>
-                          <div className="text-slate-600 font-medium text-[11px]">{sList[0].title}</div>
+                          <div className="text-[10px] text-slate-500 mb-1">{getPreviewHeader(sList[0])}</div>
                           <div className="h-12"></div>
                           <div className="border-t border-slate-400 mx-4 pt-1 text-slate-700 font-semibold">
                             ( {sList[0].name || "........................"} )
@@ -1306,16 +1312,14 @@ export default function DeliveriesPage() {
                     return (
                       <div className="flex justify-between pt-4 text-center text-xs">
                         <div className="w-[42%]">
-                          <div className="text-[10px] text-slate-500 mb-1">&nbsp;</div>
-                          <div className="text-slate-600 font-medium text-[11px]">{sList[0].title}</div>
+                          <div className="text-[10px] text-slate-500 mb-1">{getPreviewHeader(sList[0])}</div>
                           <div className="h-12"></div>
                           <div className="border-t border-slate-400 mx-4 pt-1 text-slate-700 font-semibold">
                             ( {sList[0].name || "........................"} )
                           </div>
                         </div>
                         <div className="w-[42%]">
-                          <div className="text-[10px] text-slate-500 mb-1">{rightHeader}</div>
-                          <div className="text-slate-600 font-medium text-[11px]">{sList[1].title}</div>
+                          <div className="text-[10px] text-slate-500 mb-1">{getPreviewHeader(sList[1])}</div>
                           <div className="h-12"></div>
                           <div className="border-t border-slate-400 mx-4 pt-1 text-slate-700 font-semibold">
                             ( {sList[1].name || "........................"} )
@@ -1331,9 +1335,8 @@ export default function DeliveriesPage() {
                         {sList.map((s, idx) => (
                           <div key={idx}>
                             <div className="text-[10px] text-slate-500 mb-1">
-                              {idx === sList.length - 1 ? rightHeader : "\u00A0"}
+                              {getPreviewHeader(s)}
                             </div>
-                            <div className="text-slate-600 font-medium text-[11px]">{s.title}</div>
                             <div className="h-12"></div>
                             <div className="border-t border-slate-400 mx-3 pt-1 text-slate-700 font-semibold">
                               ( {s.name || "........................"} )
@@ -1352,9 +1355,8 @@ export default function DeliveriesPage() {
                       {sList.map((s, idx) => (
                         <div key={idx}>
                           <div className="text-[10px] text-slate-500 mb-1">
-                            {idx === sList.length - 1 ? rightHeader : "\u00A0"}
+                            {getPreviewHeader(s)}
                           </div>
-                          <div className="text-slate-600 font-medium text-[11px]">{s.title}</div>
                           <div className="h-12"></div>
                           <div className="border-t border-slate-400 mx-2 pt-1 text-slate-700 font-semibold">
                             ( {s.name || "........................"} )

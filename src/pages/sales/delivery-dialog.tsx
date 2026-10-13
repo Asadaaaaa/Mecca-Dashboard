@@ -45,8 +45,6 @@ interface DeliveryDraftData {
   courierFleet: string
   trackingNumber: string
   notes: string
-  signatureCity: string
-  signatureDate: string
   signers: DeliverySigner[]
   items: DeliveryItemRow[]
 }
@@ -68,12 +66,10 @@ export function DeliveryDialog({
   const [courierFleet, setCourierFleet] = useState("")
   const [trackingNumber, setTrackingNumber] = useState("")
   const [notes, setNotes] = useState("")
-  const [signatureCity, setSignatureCity] = useState("Jakarta")
-  const [signatureDate, setSignatureDate] = useState(new Date().toISOString().slice(0, 10))
   const [signers, setSigners] = useState<DeliverySigner[]>([
-    { title: "Tanda Terima (Pelanggan)", name: "" },
-    { title: "Pengemudi / Kurir", name: "" },
-    { title: "Petugas Gudang", name: "" },
+    { city: "Jakarta", date: new Date().toISOString().slice(0, 10), name: "" },
+    { city: "Jakarta", date: new Date().toISOString().slice(0, 10), name: "" },
+    { city: "Jakarta", date: new Date().toISOString().slice(0, 10), name: "" },
   ])
   const [items, setItems] = useState<DeliveryItemRow[]>([])
 
@@ -83,8 +79,6 @@ export function DeliveryDialog({
     courierFleet,
     trackingNumber,
     notes,
-    signatureCity,
-    signatureDate,
     signers,
     items,
   }
@@ -103,12 +97,10 @@ export function DeliveryDialog({
       setCourierFleet("")
       setTrackingNumber("")
       setNotes("")
-      setSignatureCity("Jakarta")
-      setSignatureDate(today)
       setSigners([
-        { title: "Tanda Terima (Pelanggan)", name: "" },
-        { title: "Pengemudi / Kurir", name: "" },
-        { title: "Petugas Gudang", name: "" },
+        { city: "Jakarta", date: today, name: "" },
+        { city: "Jakarta", date: today, name: "" },
+        { city: "Jakarta", date: today, name: "" },
       ])
       setItems([])
       setSelectedSoIds([])
@@ -143,15 +135,23 @@ export function DeliveryDialog({
       setCourierFleet(draft.courierFleet || "")
       setTrackingNumber(draft.trackingNumber || "")
       setNotes(draft.notes || "")
-      if (draft.signatureCity) setSignatureCity(draft.signatureCity)
-      if (draft.signatureDate) setSignatureDate(draft.signatureDate)
-      if (draft.signers && draft.signers.length > 0) setSigners(draft.signers)
+      if (draft.signers && draft.signers.length > 0) {
+        setSigners(
+          draft.signers.map((s) => ({
+            city: s.city || "Jakarta",
+            date: s.date || draft.deliveryDate || new Date().toISOString().slice(0, 10),
+            name: s.name || "",
+          }))
+        )
+      }
       setItems(draft.items || [])
     }
   }
 
   const handleAddSigner = () => {
-    setSigners((prev) => [...prev, { title: "", name: "" }])
+    const lastCity = signers[signers.length - 1]?.city || "Jakarta"
+    const lastDate = signers[signers.length - 1]?.date || deliveryDate || new Date().toISOString().slice(0, 10)
+    setSigners((prev) => [...prev, { city: lastCity, date: lastDate, name: "" }])
   }
 
   const handleRemoveSigner = (index: number) => {
@@ -159,7 +159,7 @@ export function DeliveryDialog({
     setSigners((prev) => prev.filter((_, idx) => idx !== index))
   }
 
-  const handleUpdateSigner = (index: number, field: "title" | "name", value: string) => {
+  const handleUpdateSigner = (index: number, field: keyof DeliverySigner, value: string) => {
     setSigners((prev) => {
       const next = [...prev]
       next[index] = { ...next[index], [field]: value }
@@ -316,9 +316,13 @@ export function DeliveryDialog({
         courier_fleet: courierFleet || undefined,
         tracking_number: trackingNumber || undefined,
         notes: notes || undefined,
-        signature_city: signatureCity.trim() || "Jakarta",
-        signature_date: signatureDate || deliveryDate,
-        signatures: signers.filter((s) => s.title.trim().length > 0),
+        signature_city: signers[0]?.city?.trim() || "Jakarta",
+        signature_date: signers[0]?.date || deliveryDate,
+        signatures: signers.map((s) => ({
+          city: (s.city || "Jakarta").trim(),
+          date: s.date || deliveryDate,
+          name: (s.name || "").trim(),
+        })),
         items: validItems.map((it) => ({
           sales_order_id: it.sales_order_id,
           sales_order_item_id: it.sales_order_item_id,
@@ -590,7 +594,7 @@ export function DeliveryDialog({
                   Pengaturan Tanda Tangan Surat Jalan
                 </Label>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  Sesuaikan kota, tanggal, serta daftar penandatangan (2 orang = kiri & kanan, 3 orang = kiri, tengah, kanan, dst).
+                  Tentukan tempat/kota, tanggal, dan nama untuk setiap kolom tanda tangan (2 orang = kiri & kanan, 3 orang = kiri, tengah, kanan, dst).
                 </p>
               </div>
               <Button
@@ -605,27 +609,6 @@ export function DeliveryDialog({
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-muted/20 p-2.5 rounded-lg border border-border/60">
-              <div className="space-y-1">
-                <Label className="text-xs font-medium">Kota Tanda Tangan</Label>
-                <Input
-                  placeholder="Contoh: Jakarta"
-                  value={signatureCity}
-                  onChange={(e) => setSignatureCity(e.target.value)}
-                  className="text-xs h-8"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-medium">Tanggal Tanda Tangan</Label>
-                <Input
-                  type="date"
-                  value={signatureDate}
-                  onChange={(e) => setSignatureDate(e.target.value)}
-                  className="text-xs h-8"
-                />
-              </div>
-            </div>
-
             <div className="space-y-2">
               <Label className="text-xs font-medium text-muted-foreground">
                 Daftar Penandatangan ({signers.length} Orang)
@@ -634,25 +617,41 @@ export function DeliveryDialog({
                 {signers.map((signer, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center gap-2 bg-muted/30 p-2 rounded-md border border-border/50 text-xs"
+                    className="flex items-center gap-2 bg-muted/30 p-2.5 rounded-md border border-border/50 text-xs"
                   >
-                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0 self-center">
                       #{idx + 1}
                     </span>
-                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <Input
-                        placeholder="Peran / Jabatan (Contoh: Petugas Gudang / Driver / Pelanggan)"
-                        value={signer.title}
-                        onChange={(e) => handleUpdateSigner(idx, "title", e.target.value)}
-                        className="text-xs h-8"
-                        required
-                      />
-                      <Input
-                        placeholder="Nama Lengkap (Opsional - biarkan kosong jika manual)"
-                        value={signer.name || ""}
-                        onChange={(e) => handleUpdateSigner(idx, "name", e.target.value)}
-                        className="text-xs h-8"
-                      />
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Tempat / Kota</Label>
+                        <Input
+                          placeholder="Contoh: Jakarta"
+                          value={signer.city || ""}
+                          onChange={(e) => handleUpdateSigner(idx, "city", e.target.value)}
+                          className="text-xs h-8"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Tanggal</Label>
+                        <Input
+                          type="date"
+                          value={signer.date || deliveryDate}
+                          onChange={(e) => handleUpdateSigner(idx, "date", e.target.value)}
+                          className="text-xs h-8"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-muted-foreground">Nama Lengkap</Label>
+                        <Input
+                          placeholder="Contoh: Budi Santoso (Opsional)"
+                          value={signer.name || ""}
+                          onChange={(e) => handleUpdateSigner(idx, "name", e.target.value)}
+                          className="text-xs h-8"
+                        />
+                      </div>
                     </div>
                     <Button
                       type="button"
@@ -661,7 +660,7 @@ export function DeliveryDialog({
                       onClick={() => handleRemoveSigner(idx)}
                       disabled={signers.length <= 1}
                       title={signers.length <= 1 ? "Minimal 1 penandatangan" : "Hapus penandatangan"}
-                      className="cursor-pointer text-muted-foreground hover:text-red-500 hover:bg-red-500/10 shrink-0"
+                      className="cursor-pointer text-muted-foreground hover:text-red-500 hover:bg-red-500/10 shrink-0 self-center"
                     >
                       <Trash2Icon className="size-3.5" />
                     </Button>

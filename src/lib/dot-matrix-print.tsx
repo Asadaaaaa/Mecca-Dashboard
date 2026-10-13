@@ -1,5 +1,5 @@
 import type { Invoice } from "@/types/invoice.types"
-import type { Delivery } from "@/types/delivery.types"
+import type { Delivery, DeliverySigner } from "@/types/delivery.types"
 import type { SalesOrder } from "@/types/sales-order.types"
 
 
@@ -511,7 +511,7 @@ export function generateInvoiceDotMatrixHtml(inv: Invoice): string {
   `
 }
 
-export function getDeliverySigners(delivery: Delivery): Array<{ title: string; name?: string }> {
+export function getDeliverySigners(delivery: Delivery): Array<DeliverySigner> {
   let signers = delivery.signatures
   if (!signers || !Array.isArray(signers) || signers.length === 0) {
     if (delivery.signatures_data) {
@@ -526,22 +526,28 @@ export function getDeliverySigners(delivery: Delivery): Array<{ title: string; n
     }
   }
 
+  const defaultCity = delivery.signature_city || "Jakarta"
+  const defaultDate = delivery.signature_date || delivery.date || new Date().toISOString().slice(0, 10)
+
   if (!signers || signers.length === 0) {
     signers = [
-      { title: "Tanda Terima (Pelanggan)", name: "" },
-      { title: "Pengemudi / Kurir", name: "" },
-      { title: "Petugas Gudang", name: "" },
+      { city: defaultCity, date: defaultDate, name: "" },
+      { city: defaultCity, date: defaultDate, name: "" },
+      { city: defaultCity, date: defaultDate, name: "" },
     ]
   }
 
-  return signers
+  return signers.map((s) => ({
+    city: s.city || defaultCity,
+    date: s.date || defaultDate,
+    name: s.name || "",
+  }))
 }
 
 export function renderDeliverySignaturesHtml(delivery: Delivery): string {
   const signers = getDeliverySigners(delivery)
-  const city = delivery.signature_city || "Jakarta"
-  const dateFormatted = formatDotMatrixDateOnly(delivery.signature_date || delivery.date || new Date())
-  const rightDateText = `${city}, ${dateFormatted}`
+  const getHeader = (s: DeliverySigner) =>
+    `${s.city || delivery.signature_city || "Jakarta"}, ${formatDotMatrixDateOnly(s.date || delivery.signature_date || delivery.date || new Date())}`
 
   // Layout logic based on signer count:
   // 1 signer: single column
@@ -554,8 +560,7 @@ export function renderDeliverySignaturesHtml(delivery: Delivery): string {
       <table class="dm-signatures-table">
         <tr>
           <td style="width: 50%; text-align: center; margin: 0 auto;">
-            <div class="dm-sig-date-header">${rightDateText}</div>
-            <div>${s.title}</div>
+            <div class="dm-sig-date-header">${getHeader(s)}</div>
             <div class="dm-sig-space"></div>
             <div class="dm-sig-underline">( ${s.name ? s.name : ".........................."} )</div>
           </td>
@@ -571,15 +576,13 @@ export function renderDeliverySignaturesHtml(delivery: Delivery): string {
       <table class="dm-signatures-table">
         <tr>
           <td style="width: 38%; text-align: center;">
-            <div class="dm-sig-date-header">&nbsp;</div>
-            <div>${s1.title}</div>
+            <div class="dm-sig-date-header">${getHeader(s1)}</div>
             <div class="dm-sig-space"></div>
             <div class="dm-sig-underline">( ${s1.name ? s1.name : ".........................."} )</div>
           </td>
           <td style="width: 24%;">&nbsp;</td>
           <td style="width: 38%; text-align: center;">
-            <div class="dm-sig-date-header">${rightDateText}</div>
-            <div>${s2.title}</div>
+            <div class="dm-sig-date-header">${getHeader(s2)}</div>
             <div class="dm-sig-space"></div>
             <div class="dm-sig-underline">( ${s2.name ? s2.name : ".........................."} )</div>
           </td>
@@ -593,20 +596,17 @@ export function renderDeliverySignaturesHtml(delivery: Delivery): string {
       <table class="dm-signatures-table">
         <tr>
           <td style="width: 33.33%; text-align: center;">
-            <div class="dm-sig-date-header">&nbsp;</div>
-            <div>${signers[0].title}</div>
+            <div class="dm-sig-date-header">${getHeader(signers[0])}</div>
             <div class="dm-sig-space"></div>
             <div class="dm-sig-underline">( ${signers[0].name ? signers[0].name : ".........................."} )</div>
           </td>
           <td style="width: 33.33%; text-align: center;">
-            <div class="dm-sig-date-header">&nbsp;</div>
-            <div>${signers[1].title}</div>
+            <div class="dm-sig-date-header">${getHeader(signers[1])}</div>
             <div class="dm-sig-space"></div>
             <div class="dm-sig-underline">( ${signers[1].name ? signers[1].name : ".........................."} )</div>
           </td>
           <td style="width: 33.33%; text-align: center;">
-            <div class="dm-sig-date-header">${rightDateText}</div>
-            <div>${signers[2].title}</div>
+            <div class="dm-sig-date-header">${getHeader(signers[2])}</div>
             <div class="dm-sig-space"></div>
             <div class="dm-sig-underline">( ${signers[2].name ? signers[2].name : ".........................."} )</div>
           </td>
@@ -618,12 +618,10 @@ export function renderDeliverySignaturesHtml(delivery: Delivery): string {
   // 4 or more signers
   const colWidth = (100 / signers.length).toFixed(2)
   const cells = signers
-    .map((s, idx) => {
-      const isRightmost = idx === signers.length - 1
+    .map((s) => {
       return `
         <td style="width: ${colWidth}%; text-align: center;">
-          <div class="dm-sig-date-header">${isRightmost ? rightDateText : "&nbsp;"}</div>
-          <div>${s.title}</div>
+          <div class="dm-sig-date-header">${getHeader(s)}</div>
           <div class="dm-sig-space"></div>
           <div class="dm-sig-underline">( ${s.name ? s.name : ".........................."} )</div>
         </td>
