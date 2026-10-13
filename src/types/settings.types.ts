@@ -7,6 +7,11 @@ export interface Warehouse {
   address?: string | null
   pic_name?: string | null
   phone?: string | null
+  email?: string | null
+  npwp?: string | null
+  bank_name?: string | null
+  account_number?: string | null
+  account_name?: string | null
   status: "active" | "inactive"
   created_at?: string
   updated_at?: string
@@ -34,6 +39,11 @@ export interface WarehouseFormData {
   address?: string | null
   pic_name?: string | null
   phone?: string | null
+  email?: string | null
+  npwp?: string | null
+  bank_name?: string | null
+  account_number?: string | null
+  account_name?: string | null
   status: "active" | "inactive"
 }
 

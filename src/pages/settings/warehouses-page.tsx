@@ -39,6 +39,9 @@ import {
   MapPinIcon,
   PhoneIcon,
   CheckIcon,
+  CreditCardIcon,
+  MailIcon,
+  FileTextIcon,
 } from "lucide-react"
 
 export default function WarehousesPage() {
@@ -341,7 +344,8 @@ export default function WarehousesPage() {
                       <ArrowUpDownIcon className="size-3" />
                     </div>
                   </th>
-                  <th className="px-6 py-3">PIC & Kontak</th>
+                  <th className="px-6 py-3">Kontak & PIC</th>
+                  <th className="px-6 py-3">Rekening & NPWP</th>
                   <th className="px-6 py-3">Alamat</th>
                   <th
                     className="px-6 py-3 cursor-pointer hover:bg-muted/80"
@@ -358,7 +362,7 @@ export default function WarehousesPage() {
               <tbody className="divide-y">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-muted-foreground">
+                    <td colSpan={7} className="py-12 text-center text-muted-foreground">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <Loader2Icon className="size-6 animate-spin text-primary" />
                         <span>Memuat data gudang...</span>
@@ -367,7 +371,7 @@ export default function WarehousesPage() {
                   </tr>
                 ) : warehouses.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-muted-foreground">
+                    <td colSpan={7} className="py-12 text-center text-muted-foreground">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <Building2Icon className="size-8 text-muted-foreground/50" />
                         <span>Tidak ada gudang ditemukan</span>
@@ -385,11 +389,48 @@ export default function WarehousesPage() {
                         <div className="text-xs text-muted-foreground">ID Database #{wh.id}</div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="font-medium">{wh.pic_name || "-"}</div>
+                        <div className="font-medium flex items-center gap-1.5">
+                          <UserCheckIcon className="size-3.5 text-muted-foreground" />
+                          <span>{wh.pic_name || "-"}</span>
+                        </div>
                         {wh.phone && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                            <PhoneIcon className="size-3" />
-                            {wh.phone}
+                            <PhoneIcon className="size-3 text-emerald-600 dark:text-emerald-400" />
+                            <span>{wh.phone}</span>
+                          </div>
+                        )}
+                        {wh.email && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                            <MailIcon className="size-3 text-blue-600 dark:text-blue-400" />
+                            <span>{wh.email}</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {wh.account_number ? (
+                          <div className="text-xs">
+                            <div className="font-mono font-semibold flex items-center gap-1 text-foreground">
+                              <CreditCardIcon className="size-3 text-primary shrink-0" />
+                              <span>{wh.account_number}</span>
+                              {wh.bank_name && (
+                                <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                  {wh.bank_name}
+                                </span>
+                              )}
+                            </div>
+                            {wh.account_name && (
+                              <div className="text-[11px] text-muted-foreground mt-0.5">
+                                a/n {wh.account_name}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">-</span>
+                        )}
+                        {wh.npwp && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                            <FileTextIcon className="size-3 shrink-0 text-amber-600 dark:text-amber-400" />
+                            <span className="font-mono text-[11px]">NPWP: {wh.npwp}</span>
                           </div>
                         )}
                       </td>

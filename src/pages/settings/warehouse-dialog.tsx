@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { Warehouse, WarehouseFormData } from "@/types/settings.types"
-import { Loader2Icon, Building2Icon, AlertCircleIcon } from "lucide-react"
+import { Loader2Icon, Building2Icon, AlertCircleIcon, CreditCardIcon } from "lucide-react"
 
 interface WarehouseDialogProps {
   open: boolean
@@ -32,6 +32,11 @@ export function WarehouseDialog({
     name: "",
     pic_name: "",
     phone: "",
+    email: "",
+    npwp: "",
+    bank_name: "",
+    account_number: "",
+    account_name: "",
     address: "",
     status: "active",
   })
@@ -45,6 +50,11 @@ export function WarehouseDialog({
         name: warehouse.name || "",
         pic_name: warehouse.pic_name || "",
         phone: warehouse.phone || "",
+        email: warehouse.email || "",
+        npwp: warehouse.npwp || "",
+        bank_name: warehouse.bank_name || "",
+        account_number: warehouse.account_number || "",
+        account_name: warehouse.account_name || "",
         address: warehouse.address || "",
         status: warehouse.status || "active",
       })
@@ -54,6 +64,11 @@ export function WarehouseDialog({
         name: "",
         pic_name: "",
         phone: "",
+        email: "",
+        npwp: "",
+        bank_name: "",
+        account_number: "",
+        account_name: "",
         address: "",
         status: "active",
       })
@@ -83,7 +98,7 @@ export function WarehouseDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[520px]">
+      <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
@@ -93,7 +108,7 @@ export function WarehouseDialog({
               <DialogTitle>{isEdit ? "Edit Data Gudang" : "Tambah Gudang Baru"}</DialogTitle>
               <DialogDescription>
                 {isEdit
-                  ? `Perbarui informasi fasilitas penyimpanan dan penanggung jawab fisik untuk ${warehouse?.name}.`
+                  ? `Perbarui informasi fasilitas penyimpanan dan identitas resmi untuk ${warehouse?.name}.`
                   : "Daftarkan fasilitas gudang fisik atau hub transit baru ke dalam sistem."}
               </DialogDescription>
             </div>
@@ -152,6 +167,35 @@ export function WarehouseDialog({
               />
             </div>
 
+            {/* Identitas Kontak Gudang */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="phone" className="text-xs font-semibold">
+                  No. Telepon Gudang
+                </Label>
+                <Input
+                  id="phone"
+                  placeholder="Contoh: 087789910979 / 021-8901234"
+                  value={formData.phone || ""}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs font-semibold">
+                  Email Gudang
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Contoh: gudang.cakung@mecca.co.id"
+                  value={formData.email || ""}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="h-9 text-sm"
+                />
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="pic_name" className="text-xs font-semibold">
@@ -166,16 +210,62 @@ export function WarehouseDialog({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="phone" className="text-xs font-semibold">
-                  Nomor Telepon PIC
+                <Label htmlFor="npwp" className="text-xs font-semibold">
+                  NPWP
                 </Label>
                 <Input
-                  id="phone"
-                  placeholder="081234567890"
-                  value={formData.phone || ""}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="h-9 text-sm"
+                  id="npwp"
+                  placeholder="Contoh: 1000000009998558"
+                  value={formData.npwp || ""}
+                  onChange={(e) => setFormData({ ...formData, npwp: e.target.value })}
+                  className="h-9 text-sm font-mono"
                 />
+              </div>
+            </div>
+
+            {/* Informasi Rekening Bank */}
+            <div className="rounded-lg border bg-muted/20 p-3 space-y-2.5">
+              <div className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <CreditCardIcon className="size-3.5 text-primary" />
+                Informasi Rekening Bank Gudang
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="space-y-1">
+                  <Label htmlFor="bank_name" className="text-[11px] font-medium text-muted-foreground">
+                    Nama Bank
+                  </Label>
+                  <Input
+                    id="bank_name"
+                    placeholder="Contoh: Bank BCA / Mandiri"
+                    value={formData.bank_name || ""}
+                    onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="account_number" className="text-[11px] font-medium text-muted-foreground">
+                    Nomor Rekening
+                  </Label>
+                  <Input
+                    id="account_number"
+                    placeholder="Contoh: 127-00-0806202-6"
+                    value={formData.account_number || ""}
+                    onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
+                    className="h-8 text-xs font-mono"
+                  />
+                </div>
+                <div className="col-span-2 space-y-1">
+                  <Label htmlFor="account_name" className="text-[11px] font-medium text-muted-foreground">
+                    Atas Nama Rekening (Pemilik)
+                  </Label>
+                  <Input
+                    id="account_name"
+                    placeholder="Contoh: PT Mecca Distribusi Solusindo"
+                    value={formData.account_name || ""}
+                    onChange={(e) => setFormData({ ...formData, account_name: e.target.value })}
+                    className="h-8 text-xs"
+                  />
+                </div>
               </div>
             </div>
 
