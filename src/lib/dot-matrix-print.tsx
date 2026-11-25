@@ -145,6 +145,35 @@ export const DOT_MATRIX_STYLES_CSS = `
     letter-spacing: 0.5px;
     white-space: nowrap;
   }
+  .dm-majoo-header {
+    width: 100%;
+    border-top: 1.5px solid #000;
+    border-bottom: 1.5px solid #000;
+    padding: 6px 0 8px 0;
+    margin-bottom: 14px;
+  }
+  .dm-majoo-title {
+    text-align: right;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .dm-majoo-meta-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .dm-majoo-meta-col {
+    padding: 2px 12px 2px 0;
+    vertical-align: top;
+  }
+  .dm-majoo-meta-divider {
+    border-right: 1px solid #000;
+    padding-right: 14px;
+  }
+  .dm-majoo-meta-col + .dm-majoo-meta-col {
+    padding-left: 14px;
+  }
   .dm-info-grid {
     display: table;
     width: 100%;
@@ -209,7 +238,7 @@ export const DOT_MATRIX_STYLES_CSS = `
   }
   .dm-items-table td {
     padding: 6px 4px;
-    border-bottom: 1px solid #000;
+    border-bottom: 1px solid #d1d5db;
     vertical-align: top;
     font-size: 11px;
     font-weight: 700;
@@ -641,10 +670,25 @@ export function renderDeliverySignaturesHtml(delivery: Delivery): string {
 export function generateDeliveryDotMatrixHtml(delivery: Delivery): string {
   const items = delivery.items || []
   const formattedDate = formatDotMatrixDate(delivery.date || delivery.created_at)
-  const warehouseName =
-    typeof delivery.warehouse === "object"
-      ? (delivery.warehouse as { name?: string })?.name || "Gudang Utama"
-      : delivery.warehouse || "Gudang Utama"
+  const wh = delivery.warehouseDetail
+  const outletName = wh?.name || DOT_MATRIX_OUTLET.name
+  const outletAddressLines = wh?.address
+    ? wh.address.split("\n").filter(Boolean)
+    : DOT_MATRIX_OUTLET.addressLines
+  const outletEmail = wh?.email || DOT_MATRIX_OUTLET.email
+  const outletPhone = wh?.phone || DOT_MATRIX_OUTLET.phone
+  const outletNpwp = wh?.npwp || DOT_MATRIX_OUTLET.npwp
+  const bankLinesHtml = wh?.account_number
+    ? `<div style="margin-top: 3px;">${wh.bank_name || "Bank"} Nomor Rekening : ${wh.account_number} ${wh.account_name || ""}</div>`
+    : DOT_MATRIX_OUTLET.banks
+        .map(
+          (b) => `
+          <div style="margin-top: 3px;">
+            ${b.bank} Nomor Rekening : ${b.accountNo} ${b.accountName}
+          </div>
+        `
+        )
+        .join("")
 
   const itemsRows = items
     .map((it, idx) => {
@@ -660,7 +704,7 @@ export function generateDeliveryDotMatrixHtml(delivery: Delivery): string {
           <td>${name}</td>
           <td class="dm-text-right">${qty}</td>
           <td class="dm-text-center">${unit}</td>
-          <td>Kondisi Baik / Segel Utuh</td>
+          <td>Kondisi Baik</td>
         </tr>
       `
     })
@@ -673,40 +717,40 @@ export function generateDeliveryDotMatrixHtml(delivery: Delivery): string {
 
   return `
     <div class="dm-container">
-      <!-- Top Header -->
-      <table class="dm-header-table">
-        <tr>
-          <td class="dm-header-meta-col" style="width: 25%;">
-            <div class="dm-meta-label">NO SURAT JALAN</div>
-            <div class="dm-meta-value">${delivery.deliveryNo}</div>
-          </td>
-          <td class="dm-header-meta-col" style="width: 25%;">
-            <div class="dm-meta-label">TANGGAL</div>
-            <div class="dm-meta-value">${formattedDate}</div>
-          </td>
-          <td class="dm-header-meta-col" style="width: 28%;">
-            <div class="dm-meta-label">REF. ORDER</div>
-            <div class="dm-meta-value">${delivery.refOrder || "-"}</div>
-          </td>
-          <td class="dm-header-title-col" style="width: 22%;">
-            Surat Jalan
-          </td>
-        </tr>
-      </table>
+      <!-- Top Header (Majoo Layout) -->
+      <div class="dm-majoo-header">
+        <div class="dm-majoo-title">Surat Jalan</div>
+        <table class="dm-majoo-meta-table">
+          <tr>
+            <td class="dm-majoo-meta-col dm-majoo-meta-divider" style="width: 30%;">
+              <div class="dm-meta-label">NO SURAT JALAN</div>
+              <div class="dm-meta-value">${delivery.deliveryNo}</div>
+            </td>
+            <td class="dm-majoo-meta-col dm-majoo-meta-divider" style="width: 35%;">
+              <div class="dm-meta-label">TANGGAL</div>
+              <div class="dm-meta-value">${formattedDate}</div>
+            </td>
+            <td class="dm-majoo-meta-col" style="width: 35%;">
+              <div class="dm-meta-label">REF. ORDER</div>
+              <div class="dm-meta-value">${delivery.refOrder || "-"}</div>
+            </td>
+          </tr>
+        </table>
+      </div>
 
       <!-- Middle 3 Columns: Outlet | Pelanggan | Total Muatan Box -->
       <div class="dm-info-grid">
         <div class="dm-info-row">
           <div class="dm-outlet-col">
-            <div class="dm-col-heading">Outlet / Pengirim</div>
-            <div>${DOT_MATRIX_OUTLET.name}</div>
-            ${DOT_MATRIX_OUTLET.addressLines.map((line) => `<div>${line}</div>`).join("")}
-            <div>Gudang Asal: ${warehouseName}</div>
-            <div>${DOT_MATRIX_OUTLET.phone}</div>
+            <div class="dm-col-heading">Outlet</div>
+            <div>${outletName}</div>
+            ${outletAddressLines.map((line) => `<div>${line}</div>`).join("")}
+            <div>${outletEmail}</div>
+            <div>${outletPhone}</div>
           </div>
 
           <div class="dm-customer-col">
-            <div class="dm-col-heading">Pelanggan / Penerima</div>
+            <div class="dm-col-heading">Pelanggan</div>
             <div>${customerName}</div>
             <div>${customerAddress}</div>
             <div>-</div>
@@ -726,7 +770,7 @@ export function generateDeliveryDotMatrixHtml(delivery: Delivery): string {
           <tr>
             <th class="dm-text-center" style="width: 5%;">No.</th>
             <th style="width: 15%;">SKU</th>
-            <th style="width: 45%;">Deskripsi Barang</th>
+            <th style="width: 45%;">Deskripsi</th>
             <th class="dm-text-right" style="width: 10%;">QTY</th>
             <th class="dm-text-center" style="width: 10%;">Unit</th>
             <th style="width: 15%;">Keterangan</th>
@@ -740,17 +784,13 @@ export function generateDeliveryDotMatrixHtml(delivery: Delivery): string {
       <!-- Summary Section -->
       <div class="dm-summary-wrap">
         <div class="dm-summary-row">
-          <div class="dm-summary-left-cell">
-            <div><strong>Ekspedisi / Armada:</strong> ${delivery.courierFleet || "-"}</div>
-            <div><strong>No. Resi Pengiriman:</strong> ${delivery.trackingNumber || "-"}</div>
-            ${delivery.notes ? `<div><strong>Catatan:</strong> ${delivery.notes}</div>` : ""}
-          </div>
+          <div class="dm-summary-left-cell"></div>
           <div class="dm-summary-right-cell">
             <table class="dm-summary-table">
               <tr>
-                <td>Total Muatan Pengiriman</td>
-                <td style="width: 10px;">:</td>
-                <td><strong>${delivery.totalItems} Unit</strong></td>
+                <td>Subtotal ${items.length} Barang</td>
+                <td style="width: 20px;"></td>
+                <td>${delivery.totalItems} Unit</td>
               </tr>
             </table>
           </div>
@@ -770,6 +810,15 @@ export function generateDeliveryDotMatrixHtml(delivery: Delivery): string {
             </table>
           </div>
         </div>
+      </div>
+
+      <!-- Footer / Keterangan -->
+      <div class="dm-footer-section">
+        <div>Keterangan:</div>
+        <div>Ekspedisi / Armada: ${delivery.courierFleet || "-"} | No. Resi: ${delivery.trackingNumber || "-"}</div>
+        ${delivery.notes ? `<div>Catatan: ${delivery.notes}</div>` : ""}
+        ${bankLinesHtml}
+        <div style="margin-top: 3px;">NPWP : ${outletNpwp}</div>
       </div>
 
       <!-- Signatures -->

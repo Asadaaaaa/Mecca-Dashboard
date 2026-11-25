@@ -47,6 +47,18 @@ export interface Delivery {
     code?: string
     name?: string
   }
+  warehouseDetail?: {
+    id?: number
+    code?: string
+    name?: string
+    address?: string
+    phone?: string
+    email?: string
+    npwp?: string
+    bank_name?: string
+    account_number?: string
+    account_name?: string
+  } | null
   courierFleet?: string
   trackingNumber?: string
   totalItems: number
